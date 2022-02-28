@@ -124,6 +124,7 @@ button {
 
 button:hover {
     color: #c20e1a;
+    cursor:pointer;
 }
 
 #canvasForHTML {
