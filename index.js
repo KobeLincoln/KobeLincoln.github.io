@@ -8,9 +8,11 @@ var USE_DIM = REF_DIM;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
+// function sleep(ms) {
+//     return new Promise(resolve => setTimeout(resolve, ms));
+// }
+
+sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -164,7 +166,7 @@ setup = function() {
     button_welcome_generator.style('height', 70 + 'px');
     button_welcome_generator.mousePressed(nav_welcome_generator);
 
-    button_header_generator = createButton('IMAGE<br>FINDER');
+    button_header_generator = createButton('SKULL<br>CREATOR');
     button_header_generator.parent(div_navigation);
     button_header_generator.position(0, 100);
     button_header_generator.style('width', 210 + 'px');
@@ -183,10 +185,33 @@ setup = function() {
     button_download_welcome.position(15, 600);
     button_download_welcome.mousePressed(run_welcome_download);
 
-    button_download_header = createButton('DOWNLOAD IMAGES');
-    button_download_header.parent(div_preview);
-    button_download_header.position(15, 600);
-    button_download_header.mousePressed(run_header_download);
+    msg_download_prompt = createElement('h2', 'IMAGE DOWNLOADS');
+    msg_download_prompt.parent(div_preview);
+    msg_download_prompt.position(15, 550);
+    msg_download_prompt.hide()
+
+    button_download_header_all = createButton('DOWNLOAD IMAGES');
+    button_download_header_all.parent(div_preview);
+    button_download_header_all.position(15, 600);
+    button_download_header_all.mousePressed(run_header_download_all);
+
+    // button_download_header_1 = createButton('HEADER');
+    // button_download_header_1.parent(div_preview);
+    // button_download_header_1.position(15, 600);
+    // button_download_header_1.style('width', 90 + 'px');
+    // button_download_header_1.mousePressed(run_header_download_1);
+
+    // button_download_header_2 = createButton('1x1A');
+    // button_download_header_2.parent(div_preview);
+    // button_download_header_2.position(120, 600);
+    // button_download_header_2.style('width', 90 + 'px');
+    // button_download_header_2.mousePressed(run_header_download_2);
+
+    // button_download_header_3 = createButton('1x1B');
+    // button_download_header_3.parent(div_preview);
+    // button_download_header_3.position(225, 600);
+    // button_download_header_3.style('width', 90 + 'px');
+    // button_download_header_3.mousePressed(run_header_download_3);
 
     button_restart = createButton('RESTART');
     button_restart.parent(div_preview);
@@ -299,7 +324,11 @@ draw = function() {
         }
 
         if (is_preview_state && p5_canvas.parent() != div_preview) {
-            button_download_header.show();
+            msg_download_prompt.show();
+            button_download_header_all.show();
+            // button_download_header_1.show();
+            // button_download_header_2.show();
+            // button_download_header_3.show();
             msg_header_preview.show()
             msg_processing.hide();
             resizeCanvas(PREVIEW_DIM, PREVIEW_DIM);
@@ -338,12 +367,16 @@ function draw_welcome_generator_splash() {
     msg_header_preview.hide();
     button_generate.show();
     button_download_welcome.hide();
-    button_download_header.hide();
+    msg_download_prompt.hide();
+    button_download_header_all.hide();
+    // button_download_header_1.hide();
+    // button_download_header_2.hide();
+    // button_download_header_3.hide();
     button_restart.hide();
 }
 
 function draw_header_generator_splash() {
-    document.getElementById('tool_title').innerHTML = 'IMAGE<br>FINDER';
+    document.getElementById('tool_title').innerHTML = 'SKULL<br>CREATOR';
     background(0);
     input_number.show();
     input_number.value('');
@@ -355,7 +388,11 @@ function draw_header_generator_splash() {
     msg_header_preview.hide();
     button_generate.show();
     button_download_welcome.hide();
-    button_download_header.hide();
+    msg_download_prompt.hide();
+    button_download_header_all.hide();
+    // button_download_header_1.hide();
+    // button_download_header_2.hide();
+    // button_download_header_3.hide();
     button_restart.hide();
 }
 
@@ -440,12 +477,34 @@ function run_welcome_download() {
     resizeCanvas(PREVIEW_DIM, PREVIEW_DIM);
 }
 
-function run_header_download() {
-    console.log('downloading images')
+
+run_header_download_all
+
+async function run_header_download_all() {
+    console.log('downloading image 1')
     header_generation.img_header.save('CS_Twitter_Header_' + header_generation.skull_number, 'png');
+    await sleep(1000);
+    console.log('downloading image 2')
     header_generation.img_square_a.save('CS_1x1A_' + header_generation.skull_number, 'png');
+    await sleep(1000);
+    console.log('downloading image 3')
     header_generation.img_square_b.save('CS_1x1B_' + header_generation.skull_number, 'png');
 }
+
+// function run_header_download_1() {
+//     console.log('downloading image 1')
+//     header_generation.img_header.save('CS_Twitter_Header_' + header_generation.skull_number, 'png');
+// }
+
+// function run_header_download_2() {
+//     console.log('downloading image 2')
+//     header_generation.img_square_a.save('CS_1x1A_' + header_generation.skull_number, 'png');
+// }
+
+// function run_header_download_3() {
+//     console.log('downloading image 3')
+//     header_generation.img_square_b.save('CS_1x1B_' + header_generation.skull_number, 'png');
+// }
 
 function run_welcome_restart() {
     // console.log('restarting');
