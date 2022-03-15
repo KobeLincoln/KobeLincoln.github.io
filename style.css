@@ -30,6 +30,14 @@ body {
     /*background-color: yellow;*/
 }
 
+.leftNavigation{
+    width : 230px;
+    position: absolute;
+    top:  140px;
+    left: 15px;
+    /*background-color: yellow;*/
+}
+
 .logoContainer {
     width: 230px;
     position: absolute;
@@ -67,8 +75,6 @@ body {
     width : 100%;
     /*background-color: blue;*/
 }
-
-
 
 h1 {
     font-family: CryptoSkulls;
@@ -137,8 +143,6 @@ button:hover {
 #canvasForGif {
     display: none ;
 }
-
-
 
 /*div.column {
   float: left;

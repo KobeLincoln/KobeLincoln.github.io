@@ -6,6 +6,11 @@ const REF_DIM = 1000;
 const PREVIEW_DIM = 500;
 var USE_DIM = REF_DIM;
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -40,22 +45,22 @@ function get_skull_image(skull_number) {
 function get_pixel_color(img, x, y) {
     img.loadPixels()
     index = (x + y * img.width) * 4;
-    return color(img.pixels[index], img.pixels[index+1], img.pixels[index+2])
+    return color(img.pixels[index], img.pixels[index + 1], img.pixels[index + 2])
 }
 
 function expand(img, multiple) {
     let w_o = img.width;
-    let w = w_o*multiple;
-    let h = img.height*multiple;
+    let w = w_o * multiple;
+    let h = img.height * multiple;
     let img_out = createImage(w, h);
     img.loadPixels();
     img_out.loadPixels();
     let img_out_index;
-    for (let i=0; i<w; i++) {
-        for (let j=0; j<h; j++) {
-            for (let k=0; k<4; k++) {
+    for (let i = 0; i < w; i++) {
+        for (let j = 0; j < h; j++) {
+            for (let k = 0; k < 4; k++) {
                 img_out_index = (i + j * w) * 4 + k;
-                img_index = (floor(i/multiple) + floor(j/multiple) * w_o) * 4 + k;
+                img_index = (floor(i / multiple) + floor(j / multiple) * w_o) * 4 + k;
                 img_out.pixels[img_out_index] = img.pixels[img_index];
             }
         }
@@ -70,17 +75,17 @@ function bw_replace(img, color_black, color_white) {
     img.loadPixels();
     img_out.loadPixels();
     let index, color_replace
-    for (let i=0; i<img.width; i++) {
-        for (let j=0; j<img.height; j++) {
+    for (let i = 0; i < img.width; i++) {
+        for (let j = 0; j < img.height; j++) {
             index = (i + j * img.width) * 4
-            // checking red channel only
+                // checking red channel only
             if (img.pixels[index] == 0) {
                 color_replace = color_white;
             } else {
                 color_replace = color_black;
             }
-            for (let k=0; k<4; k++) {
-                img_out.pixels[index+k] = color_replace.levels[k]
+            for (let k = 0; k < 4; k++) {
+                img_out.pixels[index + k] = color_replace.levels[k]
             }
         }
     }
@@ -89,7 +94,7 @@ function bw_replace(img, color_black, color_white) {
 }
 
 function colors_match(color1, color2) {
-    for (let k=0; k<4; k++) {
+    for (let k = 0; k < 4; k++) {
         if (color1.levels[k] != color2.levels[k]) {
             return false;
         }
@@ -97,25 +102,25 @@ function colors_match(color1, color2) {
     return true;
 }
 
-
 function get_expand_width_textsize(graphic, str, max_width) {
-    for (let s=2; s<1000; s+=2) {
+    for (let s = 2; s < 1000; s += 2) {
         graphic.textSize(s);
-        graphic.textLeading(s/2);
+        graphic.textLeading(s / 2);
         if (graphic.textWidth(str) > max_width) {
-            return s-2;
+            return s - 2;
         }
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+const WELCOME_GENERATOR = 0;
+const HEADER_GENERATOR = 1;
+const SIDE_PIC_GENERATOR = 2;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-var canvas_gif;
+var p5_canvas;
 
 preload = function() {
     img_cryptoskulls = loadImage('./img/cryptoskulls.png')
@@ -126,10 +131,14 @@ preload = function() {
 }
 
 setup = function() {
+
+    tool_state = WELCOME_GENERATOR;
+
+    div_navigation = 'sideNavigation';
     div_preview = 'canvasForHTML';
     div_capture = 'canvasForGif';
-    canvas_gif = createCanvas(REF_DIM, REF_DIM);
-    canvas_gif.parent(div_capture);
+    p5_canvas = createCanvas(REF_DIM, REF_DIM);
+    p5_canvas.parent(div_capture);
 
     input_number = createInput();
     input_number.parent(div_preview);
@@ -146,20 +155,43 @@ setup = function() {
     input_longname.parent(div_preview);
     input_longname.position(15, 250);
 
+    // navigation
+
+    button_welcome_generator = createButton('WELCOME<br>GENERATOR');
+    button_welcome_generator.parent(div_navigation);
+    button_welcome_generator.position(0, 0);
+    button_welcome_generator.style('width', 210 + 'px');
+    button_welcome_generator.style('height', 70 + 'px');
+    button_welcome_generator.mousePressed(nav_welcome_generator);
+
+    button_header_generator = createButton('IMAGE<br>FINDER');
+    button_header_generator.parent(div_navigation);
+    button_header_generator.position(0, 100);
+    button_header_generator.style('width', 210 + 'px');
+    button_header_generator.style('height', 70 + 'px');
+    button_header_generator.mousePressed(nav_header_generator);
+
+    // tool(s)
+
     button_generate = createButton('GENERATE');
     button_generate.parent(div_preview);
     button_generate.position(15, 350);
     button_generate.mousePressed(run_generate);
 
-    button_download = createButton('DOWNLOAD GIF');
-    button_download.parent(div_preview);
-    button_download.position(15, 600);
-    button_download.mousePressed(run_download);
+    button_download_welcome = createButton('DOWNLOAD GIF');
+    button_download_welcome.parent(div_preview);
+    button_download_welcome.position(15, 600);
+    button_download_welcome.mousePressed(run_welcome_download);
+
+    button_download_header = createButton('DOWNLOAD IMAGES');
+    button_download_header.parent(div_preview);
+    button_download_header.position(15, 600);
+    button_download_header.mousePressed(run_header_download);
 
     button_restart = createButton('RESTART');
     button_restart.parent(div_preview);
     button_restart.position(330, 600);
-    button_restart.mousePressed(run_restart);
+    button_restart.mousePressed(run_welcome_restart);
 
     err_number = createElement('h3', 'INVALID SKULL NUMBER!');
     err_number.parent(div_preview);
@@ -181,6 +213,11 @@ setup = function() {
     msg_processing.position(15, 525);
     msg_processing.hide()
 
+    msg_header_preview = createElement('h2', 'PREVIEW IN 500x500. ACTUAL IMAGES<br>ARE 1500x500, 1000x1000 and 1000x1000.');
+    msg_header_preview.parent(div_preview);
+    msg_header_preview.position(15, 425);
+    msg_header_preview.hide()
+
     frameRate(gif_frame_rate);
     noLoop();
 }
@@ -197,60 +234,99 @@ base_frame_count = 0;
 
 draw = function() {
 
-    if (!is_looping_state && isLooping()) {
-        base_frame_count = frameCount;
-        // console.log('base_frame_count', base_frame_count)
-        is_looping_state = true;
+    if (tool_state == WELCOME_GENERATOR) {
 
-    } else if (is_looping_state && !isLooping()) {
-        is_looping_state = false;
-        is_preview_state = false;
-    }
+        if (!is_looping_state && isLooping()) {
+            base_frame_count = frameCount;
+            // console.log('base_frame_count', base_frame_count)
+            is_looping_state = true;
 
-    if (frameCount - base_frame_count == 0) {
-        is_capture_state = true;
-        // console.log('starting capture');
-        captured_frames = 0;
-        capturer = new CCapture({
-                                framerate: gif_frame_rate,
-                                format: "gif",
-                                workersPath:"./",
-                                name: "welcome_"+generation.skull_number,
-                                quality: 100,
-                                verbose: false,
-                            });
-        capturer.start();
-    }
+        } else if (is_looping_state && !isLooping()) {
+            is_looping_state = false;
+            is_preview_state = false;
+        }
 
-    if (is_preview_state && canvas_gif.parent() != div_preview) {
-        button_download.show();
-        msg_processing.hide();
-        resizeCanvas(PREVIEW_DIM, PREVIEW_DIM)
-        canvas_gif.parent(div_preview);
-    }
+        if (frameCount - base_frame_count == 0) {
+            // TODO can be included in if statement above??
+            is_capture_state = true;
+            console.log('starting capture');
+            captured_frames = 0;
+            capturer = new CCapture({
+                framerate: gif_frame_rate,
+                format: "gif",
+                workersPath: "./",
+                name: "welcome_" + welcome_generation.skull_number,
+                quality: 100,
+                verbose: false,
+            });
+            capturer.start();
+        }
 
-    if (isLooping()) {
-        frame_index = (frameCount - base_frame_count) % gif_frame_count
-        clear()
-        myImage(generation.images[frame_index])
-    } else {
-        draw_splash();
-    }
+        if (is_preview_state && p5_canvas.parent() != div_preview) {
+            button_download_welcome.show();
+            msg_processing.hide();
+            resizeCanvas(PREVIEW_DIM, PREVIEW_DIM);
+            p5_canvas.parent(div_preview);
+        }
 
-    if (is_capture_state) {
-        capturer.capture(canvas_gif.canvas);
-        captured_frames += 1;
-    }
-    if (is_capture_state && captured_frames >= gif_frame_count) {
-        is_capture_state = false;
-        capturer.stop();        
-        USE_DIM = PREVIEW_DIM;
-        is_preview_state = true;
-    }
+        if (isLooping()) {
+            clear();
+            frame_index = (frameCount - base_frame_count) % gif_frame_count;
+            myImage(welcome_generation.images[frame_index]);
+        } else {
+            draw_welcome_generator_splash();
+        }
 
+        if (is_capture_state) {
+            capturer.capture(p5_canvas.canvas);
+            captured_frames += 1;
+        }
+        if (is_capture_state && captured_frames >= gif_frame_count) {
+            is_capture_state = false;
+            capturer.stop();
+            USE_DIM = PREVIEW_DIM;
+            is_preview_state = true;
+        }
+
+    } else if (tool_state == HEADER_GENERATOR) {
+
+        if (!is_looping_state && isLooping()) {
+            is_looping_state = true;
+
+        } else if (is_looping_state && !isLooping()) {
+            is_looping_state = false;
+            is_preview_state = false;
+        }
+
+        if (is_preview_state && p5_canvas.parent() != div_preview) {
+            button_download_header.show();
+            msg_header_preview.show()
+            msg_processing.hide();
+            resizeCanvas(PREVIEW_DIM, PREVIEW_DIM);
+            p5_canvas.parent(div_preview);
+        }
+
+        if (isLooping()) {
+            clear();
+            if (header_generation.preview_produced) {
+                myImage(header_generation.preview_image);
+            } else {
+                header_generation.update();
+                if (header_generation.preview_produced) {
+                    USE_DIM = PREVIEW_DIM;
+                    is_preview_state = true;
+                }
+            }
+        } else {
+            draw_header_generator_splash();
+        }
+    }
 }
 
-function draw_splash() {
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+function draw_welcome_generator_splash() {
+    document.getElementById('tool_title').innerHTML = 'WELCOME<br>GENERATOR';
     background(0);
     input_number.show();
     input_number.value('');
@@ -258,8 +334,28 @@ function draw_splash() {
     input_handle.value('');
     input_longname.show();
     input_longname.value('');
+    msg_processing.hide();
+    msg_header_preview.hide();
     button_generate.show();
-    button_download.hide();
+    button_download_welcome.hide();
+    button_download_header.hide();
+    button_restart.hide();
+}
+
+function draw_header_generator_splash() {
+    document.getElementById('tool_title').innerHTML = 'IMAGE<br>FINDER';
+    background(0);
+    input_number.show();
+    input_number.value('');
+    input_handle.hide();
+    input_handle.value('');
+    input_longname.hide();
+    input_longname.value('');
+    msg_processing.hide();
+    msg_header_preview.hide();
+    button_generate.show();
+    button_download_welcome.hide();
+    button_download_header.hide();
     button_restart.hide();
 }
 
@@ -267,14 +363,24 @@ function draw_splash() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-var generation;
+var welcome_generation;
+var header_generation;
 var skull_number;
+
 function run_generate() {
+    if (tool_state == WELCOME_GENERATOR) {
+        run_welcome_generate();
+    } else if (tool_state == HEADER_GENERATOR) {
+        run_header_generate();
+    }
+}
+
+function run_welcome_generate() {
 
     skull_number = parseInt(input_number.value());
     twitter_handle = input_handle.value();
     twitter_longname = input_longname.value();
-    // console.log('run_generate', skull_number, twitter_handle, twitter_longname)
+    // console.log('run_welcome_generate', skull_number, twitter_handle, twitter_longname)
 
     if (input_number.value() == '' || skull_number == undefined || skull_number < 1 || skull_number > 10000) {
         // console.log('invalid skull number input');
@@ -302,37 +408,129 @@ function run_generate() {
     button_restart.show();
     msg_processing.show();
 
-    generation = new Generation(skull_number, twitter_handle, twitter_longname);
+    welcome_generation = new WelcomeGeneration(skull_number, twitter_handle, twitter_longname);
     loop();
 }
 
-function run_download() {
+function run_header_generate() {
+
+    skull_number = parseInt(input_number.value());
+
+    if (input_number.value() == '' || skull_number == undefined || skull_number < 1 || skull_number > 10000) {
+        // console.log('invalid skull number input');
+        err_number.show();
+        return;
+    }
+
+    input_number.hide();
+    button_generate.hide();
+    err_number.hide();
+    button_restart.show();
+
+    header_generation = new HeaderGeneration(skull_number);
+    header_generation.produce()
+    loop();
+
+}
+
+function run_welcome_download() {
     console.log('downloading gif')
     resizeCanvas(REF_DIM, REF_DIM);
     capturer.save();
     resizeCanvas(PREVIEW_DIM, PREVIEW_DIM);
 }
 
-function run_restart() {
+function run_header_download() {
+    console.log('downloading images')
+    header_generation.img_header.save('CS_Twitter_Header_' + header_generation.skull_number, 'png');
+    header_generation.img_square_a.save('CS_1x1A_' + header_generation.skull_number, 'png');
+    header_generation.img_square_b.save('CS_1x1B_' + header_generation.skull_number, 'png');
+}
+
+function run_welcome_restart() {
     // console.log('restarting');
+    is_looping_state = false;
+    is_preview_state = false;
+    is_capture_state = false;
+    base_frame_count = 0;
+    noLoop();
     USE_DIM = REF_DIM;
     resizeCanvas(REF_DIM, REF_DIM);
-    canvas_gif.parent(div_capture);
-    noLoop();
+    p5_canvas.parent(div_capture);
+}
+
+function nav_welcome_generator() {
+    tool_state = WELCOME_GENERATOR;
+    run_welcome_restart();
+}
+
+function nav_header_generator() {
+    tool_state = HEADER_GENERATOR;
+    run_welcome_restart();
 }
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-function Generation(skull_number, twitter_handle, twitter_longname) {
+class HeaderGeneration {
+    constructor(skull_number) {
+        this.skull_number = skull_number;
+        this.loaded_header = false;
+        this.loaded_square_a = false;
+        this.loaded_square_b = false;
+        this.preview_produced = false;
+    }
+    produce() {
+        this.preview_image = createGraphics(PREVIEW_DIM, PREVIEW_DIM);
+        console.log('generating header', this.skull_number);
+        let img_base_url = 'https://raw.githubusercontent.com/KobeLincoln/cryptoskull_stuff/main/exports/';
+        this.img_header = loadImage(img_base_url + 'CS_Twitter_Header/' + this.skull_number + '.png', () => {this.loaded_header = true;});
+        this.img_square_a = loadImage(img_base_url + 'CS_1x1A/' + this.skull_number + '.png', () => {this.loaded_square_a = true;});
+        this.img_square_b = loadImage(img_base_url + 'CS_1x1B/' + this.skull_number + '.png', () => {this.loaded_square_b = true;});
+    }
+    update() {
+        if (this.loaded_header && this.loaded_square_a && this.loaded_square_b && !this.preview_produced) {
+            console.log('generating preview image')
+            let img_header_scaled = copyImage(this.img_header);
+            let img_square_a_scaled = copyImage(this.img_square_a);
+            let img_square_b_scaled = copyImage(this.img_square_b);
+
+            let half_dim = floor(PREVIEW_DIM / 2) - 1;
+            let third_dim = floor(PREVIEW_DIM / 3);
+
+            img_header_scaled.resize(PREVIEW_DIM, third_dim);
+            img_square_a_scaled.resize(half_dim, half_dim);
+            img_square_b_scaled.resize(half_dim, half_dim);
+
+            this.preview_image.image(img_header_scaled, 0, 0);
+            this.preview_image.image(img_square_a_scaled, 0, third_dim + 2);
+            this.preview_image.image(img_square_b_scaled, half_dim + 2, third_dim + 2);
+
+            this.preview_image.textAlign(CENTER, CENTER);
+            this.preview_image.textFont(font_cs);
+            this.preview_image.fill('#c20e1a');
+            this.preview_image.textSize(150);
+            this.preview_image.translate(PREVIEW_DIM/2, PREVIEW_DIM/3);
+            this.preview_image.rotate(-QUARTER_PI/2);
+            this.preview_image.text('PREVIEW', 0, 0);
+
+            this.preview_produced = true;
+        } else {
+            console.log(this.loaded_header, this.loaded_square_a, this.loaded_square_b, this.preview_produced)
+        }
+    }
+}
+
+
+function WelcomeGeneration(skull_number, twitter_handle, twitter_longname) {
     this.skull_number = skull_number;
     this.twitter_handle = twitter_handle;
     this.twitter_longname = twitter_longname;
 
     this.produce = function() {
 
-        console.log('generating', this.skull_number, this.twitter_handle, this.twitter_longname)
+        console.log('generating welcome', this.skull_number, this.twitter_handle, this.twitter_longname);
 
         this.img_skull = get_skull_image(this.skull_number);
         color_outline = color(38, 50, 56)
@@ -344,7 +542,7 @@ function Generation(skull_number, twitter_handle, twitter_longname) {
             color_hair = get_pixel_color(this.img_skull, 4, 3);
         }
         color_eyes = get_pixel_color(this.img_skull, 9, 10);
-        
+
         if (!colors_match(color_bones, this.color_bg)) {
             color_accent = color_bones;
         } else if (!colors_match(color_hair, this.color_bg)) {
@@ -367,15 +565,15 @@ function Generation(skull_number, twitter_handle, twitter_longname) {
 
         this.images = [];
         let temp_image;
-        for (let i=0; i<gif_frame_count; i++) {
+        for (let i = 0; i < gif_frame_count; i++) {
             this.images.push(this.generate_frame(i))
         }
     }
 
     this.expansions = [19, 30, 45, 109, 187];
-    
+
     this.generate_frame = function(frame_index) {
-        let graphic = createGraphics(REF_DIM, REF_DIM)
+        let graphic = createGraphics(REF_DIM, REF_DIM);
         graphic.textAlign(CENTER, CENTER);
         graphic.textFont(font_cs);
 
@@ -384,8 +582,8 @@ function Generation(skull_number, twitter_handle, twitter_longname) {
             graphic.fill(this.color_skull);
         } else if (frame_index <= 14) {
             graphic.background(this.color_skull);
-            graphic.textSize(REF_DIM/3);
-            graphic.textLeading(REF_DIM/6);
+            graphic.textSize(REF_DIM / 3);
+            graphic.textLeading(REF_DIM / 6);
             graphic.fill(this.color_bg);
         } else {
             graphic.clear();
@@ -393,38 +591,38 @@ function Generation(skull_number, twitter_handle, twitter_longname) {
         let s, str;
         switch (true) {
             case frame_index <= 1:
-                s = get_expand_width_textsize(graphic, 'CRYPTO', REF_DIM*0.95);
+                s = get_expand_width_textsize(graphic, 'CRYPTO', REF_DIM * 0.95);
                 // console.log('text size', s)
                 graphic.textSize(s);
-                graphic.textLeading(s/2);
-                graphic.text('CRYPTO\nSKULL', REF_DIM/2,  REF_DIM/2);
+                graphic.textLeading(s / 2);
+                graphic.text('CRYPTO\nSKULL', REF_DIM / 2, REF_DIM / 2);
                 break;
             case frame_index <= 3:
                 str = '#' + this.skull_number;
-                s = get_expand_width_textsize(graphic, str, REF_DIM*0.95);
+                s = get_expand_width_textsize(graphic, str, REF_DIM * 0.95);
                 // console.log('text size', s)
                 graphic.textSize(s);
-                graphic.text(str, REF_DIM/2,  REF_DIM/2)
+                graphic.text(str, REF_DIM / 2, REF_DIM / 2);
                 break;
             case frame_index <= 8:
-                img_resized = expand(this.img_skull, this.expansions[frame_index-4]);
-                x = (REF_DIM-img_resized.width) / 2;
-                y = (REF_DIM-img_resized.height) / 2;
+                img_resized = expand(this.img_skull, this.expansions[frame_index - 4]);
+                x = (REF_DIM - img_resized.width) / 2;
+                y = (REF_DIM - img_resized.height) / 2;
                 graphic.image(img_resized, x, y);
                 break;
             case frame_index <= 10:
-                s = min(get_expand_width_textsize(graphic, this.twitter_handle, REF_DIM*0.95),
-                        get_expand_width_textsize(graphic, this.twitter_longname, REF_DIM*0.95));
+                s = min(get_expand_width_textsize(graphic, this.twitter_handle, REF_DIM * 0.95),
+                    get_expand_width_textsize(graphic, this.twitter_longname, REF_DIM * 0.95));
                 // console.log('text size', s)
                 graphic.textSize(s);
-                graphic.textLeading(s/2);
-                graphic.text(this.twitter_handle+'\n'+this.twitter_longname, REF_DIM/2, REF_DIM/2);
+                graphic.textLeading(s / 2);
+                graphic.text(this.twitter_handle + '\n' + this.twitter_longname, REF_DIM / 2, REF_DIM / 2);
                 break;
             case frame_index <= 12:
-                graphic.text('WELCOME', REF_DIM/2, REF_DIM/2);
+                graphic.text('WELCOME', REF_DIM / 2, REF_DIM / 2);
                 break;
             case frame_index <= 14:
-                graphic.text('TO', REF_DIM/2, REF_DIM/2);
+                graphic.text('TO', REF_DIM / 2, REF_DIM / 2);
                 break;
             case frame_index <= 15:
                 graphic.image(this.img_16, 0, 0);
@@ -445,7 +643,7 @@ function Generation(skull_number, twitter_handle, twitter_longname) {
                 graphic.image(this.img_21, 0, 0);
                 break;
         }
-        return graphic
+        return graphic;
     }
 
     this.produce()
