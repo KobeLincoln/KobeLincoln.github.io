@@ -8,6 +8,10 @@ var USE_DIM = REF_DIM;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+const special_tokens = [9, 19, 20, 24, 27, 36, 41, 42, 43, 70];
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // function sleep(ms) {
 //     return new Promise(resolve => setTimeout(resolve, ms));
 // }
@@ -15,34 +19,6 @@ var USE_DIM = REF_DIM;
 sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-function copyImage(img) {
-    let img_new = createImage(img.width, img.height);
-    img_new.copy(img, 0, 0, img.width, img.height, 0, 0, img_new.width, img_new.height);
-    return img_new;
-}
-
-// function scaleImageUp(img, factor=1) {
-//     let w = img.width;
-//     let h = img.height;
-//     let img_new = createImage(w * factor, h * factor);
-//     img.loadPixels();
-//     img_new.loadPixels();
-//     let i_old, i_new;
-//     for (let i=0; i<w; i++) {
-//         for (let j=0; j<h; j++) {
-//             i_old = i * w + j;
-//             for (let x=0; x<factor; x++) {
-//                 for (let y=0; y<factor; y++) {
-//                     i_new = (i * factor + x) * w + (j * factor + y);
-//                     img_new.pixels
-//                 }
-//             }
-//         }
-//     }
-//     img_new.updatePixels();
-
-// }
 
 function myImage(img) {
     let scaled_width = max(1, USE_DIM);
@@ -141,6 +117,7 @@ function get_expand_width_textsize(graphic, str, max_width) {
 const WELCOME_GENERATOR_TAB = 0;
 const HEADER_GENERATION_TAB = 1;
 const SIDE_PIC_GENERATION_TAB = 2;
+const VECTOR_GENERATION_TAB = 3;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -202,6 +179,13 @@ setup = function() {
     button_side_pic_generator.style('height', 70 + 'px');
     button_side_pic_generator.mousePressed(nav_side_pic_generator);
 
+    button_vector_generator = createButton('SCALABLE<br>PRINT VECTORS');
+    button_vector_generator.parent(div_navigation);
+    button_vector_generator.position(0, 300);
+    button_vector_generator.style('width', 210 + 'px');
+    button_vector_generator.style('height', 70 + 'px');
+    button_vector_generator.mousePressed(nav_vector_generator);
+
     // tool(s)
 
     button_generate = createButton('GENERATE');
@@ -224,6 +208,11 @@ setup = function() {
     button_download_side_pic.position(15, 600);
     button_download_side_pic.mousePressed(run_side_pic_download);
 
+    button_download_vector = createButton('DOWNLOAD VECTORS');
+    button_download_vector.parent(div_preview);
+    button_download_vector.position(15, 600);
+    button_download_vector.mousePressed(run_vector_download);
+
     button_restart = createButton('RESTART');
     button_restart.parent(div_preview);
     button_restart.position(330, 600);
@@ -233,6 +222,11 @@ setup = function() {
     err_number.parent(div_preview);
     err_number.position(15, 450);
     err_number.hide();
+
+    err_lord = createElement('h3', 'NO LORDS! ONLY PEASANT SKULLS!');
+    err_lord.parent(div_preview);
+    err_lord.position(15, 450);
+    err_lord.hide();
 
     err_handle = createElement('h3', 'INVALID TWITTER HANDLE!');
     err_handle.parent(div_preview);
@@ -258,6 +252,11 @@ setup = function() {
     msg_side_pic_preview.parent(div_preview);
     msg_side_pic_preview.position(15, 425);
     msg_side_pic_preview.hide();
+
+    msg_vector_preview = createElement('h2', 'REGULAR AND TRANSPARENT BACKGROUND<br>VECTORS AVAILABLE FOR DOWNLOAD.');
+    msg_vector_preview.parent(div_preview);
+    msg_vector_preview.position(15, 525);
+    msg_vector_preview.hide();
 
     frameRate(gif_frame_rate);
     noLoop();
@@ -395,63 +394,89 @@ draw = function() {
             draw_side_pic_generator_splash();
         }
 
+    } else if (tool_state == VECTOR_GENERATION_TAB) {
+
+        if (!is_looping_state && isLooping()) {
+            is_looping_state = true;
+
+        } else if (is_looping_state && !isLooping()) {
+            is_looping_state = false;
+            is_preview_state = false;
+        }
+
+        if (is_preview_state && p5_canvas.parent() != div_preview) {
+            button_download_vector.show();
+            msg_vector_preview.show()
+            msg_processing.hide();
+            resizeCanvas(PREVIEW_DIM, PREVIEW_DIM);
+            p5_canvas.parent(div_preview);
+        }
+
+        if (isLooping()) {
+            clear();
+            if (vector_generation.preview_produced) {
+                myImage(vector_generation.preview_image);
+            } else {
+                vector_generation.update();
+                if (vector_generation.preview_produced) {
+                    USE_DIM = PREVIEW_DIM;
+                    is_preview_state = true;
+                }
+            }
+        } else {
+            draw_vector_generator_splash();
+        }
+
     }
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-function draw_welcome_generator_splash() {
-    document.getElementById('tool_title').innerHTML = 'WELCOME<br>GENERATOR';
+function draw_splash_reset() {
+
     background(0);
+
     input_number.show();
+    input_handle.hide();
+    input_longname.hide();
+
     input_number.value('');
-    input_handle.show();
     input_handle.value('');
-    input_longname.show();
     input_longname.value('');
+
+    button_generate.show();
     msg_processing.hide();
     msg_header_preview.hide();
     msg_side_pic_preview.hide();
-    button_generate.show();
+    msg_vector_preview.hide();
     button_download_welcome.hide();
     button_download_header_all.hide();
+    button_download_side_pic.hide();
+    button_download_vector.hide();
     button_restart.hide();
+}
+
+function draw_welcome_generator_splash() {
+    draw_splash_reset();
+    input_handle.show();
+    input_longname.show();
+    document.getElementById('tool_title').innerHTML = 'WELCOME<br>GENERATOR';
 }
 
 function draw_header_generator_splash() {
+    draw_splash_reset();
     document.getElementById('tool_title').innerHTML = 'SKULL<br>CREATOR';
-    background(0);
-    input_number.show();
-    input_number.value('');
-    input_handle.hide();
-    input_handle.value('');
-    input_longname.hide();
-    input_longname.value('');
-    msg_processing.hide();
-    msg_header_preview.hide();
-    msg_side_pic_preview.hide();
-    button_generate.show();
-    button_download_welcome.hide();
-    button_download_header_all.hide();
-    button_restart.hide();
 }
 
 function draw_side_pic_generator_splash() {
+    draw_splash_reset();
     document.getElementById('tool_title').innerHTML = 'SKULL<br>SIDE PIC';
-    background(0);
-    input_number.show();
-    input_number.value('');
-    input_handle.hide();
-    input_handle.value('');
-    input_longname.hide();
-    input_longname.value('');
-    msg_processing.hide();
-    msg_header_preview.hide();
-    msg_side_pic_preview.hide();
-    button_generate.show();
-    button_download_welcome.hide();
-    button_download_side_pic.hide();
-    button_restart.hide();
+}
+
+function draw_vector_generator_splash() {
+    draw_splash_reset();
+    document.getElementById('tool_title').innerHTML = 'SCALABLE<br>PRINT VECTORS';
 }
 
 
@@ -469,6 +494,8 @@ function run_generate() {
         run_header_generate();
     } else if (tool_state == SIDE_PIC_GENERATION_TAB) {
         run_side_pic_generate();
+    } else if (tool_state == VECTOR_GENERATION_TAB) {
+        run_vector_generate();
     }
 }
 
@@ -479,11 +506,17 @@ function run_welcome_generate() {
     twitter_longname = input_longname.value();
     // console.log('run_welcome_generate', skull_number, twitter_handle, twitter_longname)
 
-    if (input_number.value() == '' || skull_number == undefined || skull_number < 1 || skull_number > 10000) {
+    if (input_number.value() == '' || skull_number == undefined || skull_number < 1 || skull_number > 10000 || isNaN(skull_number)) {
         // console.log('invalid skull number input');
         err_number.show();
         return;
     }
+
+    if (special_tokens.indexOf(skull_number) !== -1) {
+        err_lord.show();
+        return;
+    }
+
     if (twitter_handle == undefined || twitter_handle == '') {
         // console.log('invalid twitter handle input');
         err_handle.show();
@@ -500,6 +533,7 @@ function run_welcome_generate() {
     input_longname.hide();
     button_generate.hide();
     err_number.hide();
+    err_lord.hide();
     err_handle.hide();
     err_longname.hide();
     button_restart.show();
@@ -520,19 +554,25 @@ function run_header_generate() {
 
     skull_number = parseInt(input_number.value());
 
-    if (input_number.value() == '' || skull_number == undefined || skull_number < 1 || skull_number > 10000) {
+    if (input_number.value() == '' || skull_number == undefined || skull_number < 1 || skull_number > 10000 || isNaN(skull_number)) {
         // console.log('invalid skull number input');
         err_number.show();
+        return;
+    }
+
+    if (special_tokens.indexOf(skull_number) !== -1) {
+        err_lord.show();
         return;
     }
 
     input_number.hide();
     button_generate.hide();
     err_number.hide();
+    err_lord.hide();
     button_restart.show();
 
     header_generation = new HeaderGeneration(skull_number);
-    header_generation.produce()
+    header_generation.produce();
     loop();
 
 }
@@ -541,37 +581,91 @@ function run_side_pic_generate() {
 
     skull_number = parseInt(input_number.value());
 
-    if (input_number.value() == '' || skull_number == undefined || skull_number < 1 || skull_number > 10000) {
+    if (input_number.value() == '' || skull_number == undefined || skull_number < 1 || skull_number > 10000 || isNaN(skull_number)) {
         // console.log('invalid skull number input');
         err_number.show();
+        return;
+    }
+
+    if (special_tokens.indexOf(skull_number) !== -1) {
+        err_lord.show();
         return;
     }
 
     input_number.hide();
     button_generate.hide();
     err_number.hide();
+    err_lord.hide();
     button_restart.show();
 
     side_pic_generation = new SidePicGeneration(skull_number);
-    side_pic_generation.produce()
+    side_pic_generation.produce();
+    loop();
+
+}
+
+function run_vector_generate() {
+
+    skull_number = parseInt(input_number.value());
+
+    if (input_number.value() == '' || skull_number == undefined || skull_number < 1 || skull_number > 10000 || isNaN(skull_number)) {
+        // console.log('invalid skull number input');
+        err_number.show();
+        return;
+    }
+
+    if (special_tokens.indexOf(skull_number) !== -1) {
+        err_lord.show();
+        return;
+    }
+
+    input_number.hide();
+    button_generate.hide();
+    err_number.hide();
+    err_lord.hide();
+    button_restart.show();
+
+    vector_generation = new VectorGeneration(skull_number);
+    vector_generation.produce();
     loop();
 
 }
 
 async function run_header_download_all() {
-    console.log('downloading image 1')
+    console.log('downloading image 1');
     header_generation.img_header.save('CS_Twitter_Header_' + header_generation.skull_number, 'png');
     await sleep(1000);
-    console.log('downloading image 2')
+    console.log('downloading image 2');
     header_generation.img_square_a.save('CS_1x1A_' + header_generation.skull_number, 'png');
     await sleep(1000);
-    console.log('downloading image 3')
+    console.log('downloading image 3');
     header_generation.img_square_b.save('CS_1x1B_' + header_generation.skull_number, 'png');
 }
 
 function run_side_pic_download() {
-    console.log('downloading image')
+    console.log('downloading image');
     side_pic_generation.img_side_pic_dl.save('CS_side_pic_' + side_pic_generation.skull_number, 'png');
+}
+
+async function run_vector_download() {
+    console.log('downloading vectors');
+
+    var anchor_1 = document.createElement('a');
+    anchor_1.href = vector_generation.url_svg_o;
+    anchor_1.target = '_blank';
+    anchor_1.download = 'CS_vector_' + vector_generation.skull_number + '.svg';
+
+    var anchor_2 = document.createElement('a');
+    anchor_2.href = vector_generation.url_svg_t;
+    anchor_2.target = '_blank';
+    anchor_2.download = 'CS_vector_t_' + vector_generation.skull_number + '.svg';
+
+    anchor_1.click();
+    await sleep(1000);
+    anchor_2.click();
+
+    document.removeChild(anchor_1);
+    document.removeChild(anchor_2);
 }
 
 function run_welcome_restart() {
@@ -601,99 +695,12 @@ function nav_side_pic_generator() {
     run_welcome_restart();
 }
 
+function nav_vector_generator() {
+    tool_state = VECTOR_GENERATION_TAB;
+    run_welcome_restart();
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-class SidePicGeneration {
-    constructor(skull_number) {
-        this.skull_number = skull_number;
-        this.loaded_side_pic = false;
-        this.loaded_og_pic = false;
-        this.preview_produced = false;
-    }
-    produce() {
-        this.preview_image = createGraphics(480, 480);
-        console.log('generating side pic', this.skull_number);
-        let img_base_url = 'https://raw.githubusercontent.com/KobeLincoln/cryptoskull_stuff/main/exports/';
-        this.img_og_pic = loadImage(img_base_url + 'cryptoskulls_24/' + this.skull_number + '.png', () => {this.loaded_og_pic = true;});
-        this.img_side_pic = loadImage(img_base_url + 'cryptoskulls_24_profile/' + this.skull_number + '.png', () => {this.loaded_side_pic = true;});
-    }
-    update() {
-        if (this.loaded_side_pic && this.loaded_og_pic && !this.preview_produced) {
-            console.log('generating preview image');
-
-            this.img_side_pic_dl = expand(this.img_side_pic, 14);
-
-            let img_og_pic_scaled = expand(this.img_og_pic, 10);
-            let img_side_pic_scaled = expand(this.img_side_pic, 10);
-            this.preview_image.image(img_side_pic_scaled, 260, 0);
-            this.preview_image.image(img_og_pic_scaled, 0, 0);
-
-            // this.preview_image.textAlign(CENTER, CENTER);
-            // this.preview_image.textFont(font_cs);
-            // this.preview_image.fill('#c20e1a');
-            // this.preview_image.textSize(150);
-            // this.preview_image.translate(PREVIEW_DIM/2, PREVIEW_DIM/3);
-            // this.preview_image.rotate(-QUARTER_PI/2);
-            // this.preview_image.text('PREVIEW', 0, 0);
-
-            this.preview_produced = true;
-        } else {
-            // console.log(this.loaded_side_pic, this.preview_produced)
-        }
-    }
-}
-
-
-class HeaderGeneration {
-    constructor(skull_number) {
-        this.skull_number = skull_number;
-        this.loaded_header = false;
-        this.loaded_square_a = false;
-        this.loaded_square_b = false;
-        this.preview_produced = false;
-    }
-    produce() {
-        this.preview_image = createGraphics(PREVIEW_DIM, PREVIEW_DIM);
-        console.log('generating header', this.skull_number);
-        let img_base_url = 'https://raw.githubusercontent.com/KobeLincoln/cryptoskull_stuff/main/exports/';
-        this.img_header = loadImage(img_base_url + 'CS_Twitter_Header/' + this.skull_number + '.png', () => {this.loaded_header = true;});
-        this.img_square_a = loadImage(img_base_url + 'CS_1x1A/' + this.skull_number + '.png', () => {this.loaded_square_a = true;});
-        this.img_square_b = loadImage(img_base_url + 'CS_1x1B/' + this.skull_number + '.png', () => {this.loaded_square_b = true;});
-    }
-    update() {
-        if (this.loaded_header && this.loaded_square_a && this.loaded_square_b && !this.preview_produced) {
-            console.log('generating preview image')
-            let img_header_scaled = this.img_header.get();
-            let img_square_a_scaled = this.img_square_a.get();
-            let img_square_b_scaled = this.img_square_b.get();
-
-            let half_dim = floor(PREVIEW_DIM / 2) - 1;
-            let third_dim = floor(PREVIEW_DIM / 3);
-
-            img_header_scaled.resize(PREVIEW_DIM, third_dim);
-            img_square_a_scaled.resize(half_dim, half_dim);
-            img_square_b_scaled.resize(half_dim, half_dim);
-
-            this.preview_image.image(img_header_scaled, 0, 0);
-            this.preview_image.image(img_square_a_scaled, 0, third_dim + 2);
-            this.preview_image.image(img_square_b_scaled, half_dim + 2, third_dim + 2);
-
-            this.preview_image.textAlign(CENTER, CENTER);
-            this.preview_image.textFont(font_cs);
-            this.preview_image.fill('#c20e1a');
-            this.preview_image.textSize(150);
-            this.preview_image.translate(PREVIEW_DIM/2, PREVIEW_DIM/3);
-            this.preview_image.rotate(-QUARTER_PI/2);
-            this.preview_image.text('PREVIEW', 0, 0);
-
-            this.preview_produced = true;
-        } else {
-            // console.log(this.loaded_header, this.loaded_square_a, this.loaded_square_b, this.preview_produced)
-        }
-    }
-}
-
 
 function WelcomeGeneration(skull_number, twitter_handle, twitter_longname) {
     this.skull_number = skull_number;
@@ -820,3 +827,112 @@ function WelcomeGeneration(skull_number, twitter_handle, twitter_longname) {
 
     this.produce()
 }
+
+class HeaderGeneration {
+    constructor(skull_number) {
+        this.skull_number = skull_number;
+        this.loaded_header = false;
+        this.loaded_square_a = false;
+        this.loaded_square_b = false;
+        this.preview_produced = false;
+    }
+    produce() {
+        this.preview_image = createGraphics(PREVIEW_DIM, PREVIEW_DIM);
+        console.log('generating header', this.skull_number);
+        let img_base_url = 'https://raw.githubusercontent.com/KobeLincoln/cryptoskull_stuff/main/exports/';
+        this.img_header = loadImage(img_base_url + 'CS_Twitter_Header/' + this.skull_number + '.png', () => {this.loaded_header = true;});
+        this.img_square_a = loadImage(img_base_url + 'CS_1x1A/' + this.skull_number + '.png', () => {this.loaded_square_a = true;});
+        this.img_square_b = loadImage(img_base_url + 'CS_1x1B/' + this.skull_number + '.png', () => {this.loaded_square_b = true;});
+    }
+    update() {
+        if (this.loaded_header && this.loaded_square_a && this.loaded_square_b && !this.preview_produced) {
+            console.log('generating preview image')
+            let img_header_scaled = this.img_header.get();
+            let img_square_a_scaled = this.img_square_a.get();
+            let img_square_b_scaled = this.img_square_b.get();
+
+            let half_dim = floor(PREVIEW_DIM / 2) - 1;
+            let third_dim = floor(PREVIEW_DIM / 3);
+
+            img_header_scaled.resize(PREVIEW_DIM, third_dim);
+            img_square_a_scaled.resize(half_dim, half_dim);
+            img_square_b_scaled.resize(half_dim, half_dim);
+
+            this.preview_image.image(img_header_scaled, 0, 0);
+            this.preview_image.image(img_square_a_scaled, 0, third_dim + 2);
+            this.preview_image.image(img_square_b_scaled, half_dim + 2, third_dim + 2);
+
+            this.preview_image.textAlign(CENTER, CENTER);
+            this.preview_image.textFont(font_cs);
+            this.preview_image.fill('#c20e1a');
+            this.preview_image.textSize(150);
+            this.preview_image.translate(PREVIEW_DIM/2, PREVIEW_DIM/3);
+            this.preview_image.rotate(-QUARTER_PI/2);
+            this.preview_image.text('PREVIEW', 0, 0);
+
+            this.preview_produced = true;
+        } else {
+            // console.log(this.loaded_header, this.loaded_square_a, this.loaded_square_b, this.preview_produced)
+        }
+    }
+}
+
+class SidePicGeneration {
+    constructor(skull_number) {
+        this.skull_number = skull_number;
+        this.loaded_side_pic = false;
+        this.loaded_og_pic = false;
+        this.preview_produced = false;
+    }
+    produce() {
+        this.preview_image = createGraphics(480, 480);
+        console.log('generating side pic', this.skull_number);
+        let img_base_url = 'https://raw.githubusercontent.com/KobeLincoln/cryptoskull_stuff/main/exports/';
+        this.img_og_pic = loadImage(img_base_url + 'cryptoskulls_24/' + this.skull_number + '.png', () => {this.loaded_og_pic = true;});
+        this.img_side_pic = loadImage(img_base_url + 'cryptoskulls_24_profile/' + this.skull_number + '.png', () => {this.loaded_side_pic = true;});
+    }
+    update() {
+        if (this.loaded_side_pic && this.loaded_og_pic && !this.preview_produced) {
+            console.log('generating preview image');
+
+            this.img_side_pic_dl = expand(this.img_side_pic, 14);
+
+            let img_og_pic_scaled = expand(this.img_og_pic, 10);
+            let img_side_pic_scaled = expand(this.img_side_pic, 10);
+            this.preview_image.image(img_side_pic_scaled, 260, 0);
+            this.preview_image.image(img_og_pic_scaled, 0, 0);
+
+            this.preview_produced = true;
+        } else {
+            // console.log(this.loaded_side_pic, this.preview_produced)
+        }
+    }
+}
+
+class VectorGeneration {
+    constructor(skull_number) {
+        this.skull_number = skull_number;
+        this.loaded_og_pic = false;
+        this.preview_produced = false;
+    }
+    produce() {
+        this.preview_image = createGraphics(480, 480);
+        console.log('generating vector', this.skull_number);
+        let img_base_url = 'https://raw.githubusercontent.com/KobeLincoln/cryptoskull_stuff/main/exports/';
+        this.img_og_pic = loadImage(img_base_url + 'cryptoskulls_24/' + this.skull_number + '.png', () => {this.loaded_og_pic = true;});
+        this.url_svg_o = 'img/exports/svg/' + this.skull_number + '.svg';
+        this.url_svg_t = 'img/exports/svg_t/' + this.skull_number + '.svg';
+
+    }
+    update() {
+        if (this.loaded_og_pic && !this.preview_produced) {
+            console.log('generating preview image');
+            let img_og_pic_scaled = expand(this.img_og_pic, 20);
+            this.preview_image.image(img_og_pic_scaled, 0, 0);
+            this.preview_produced = true;
+        } else {
+            // console.log(this.loaded_side_pic, this.preview_produced)
+        }
+    }
+}
+
