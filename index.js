@@ -17,20 +17,42 @@ sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 function copyImage(img) {
-    let img_new = createImage(img.width, img.height)
-    img_new.copy(img, 0, 0, img.width, img.height, 0, 0, img_new.width, img_new.height)
-    return img_new
+    let img_new = createImage(img.width, img.height);
+    img_new.copy(img, 0, 0, img.width, img.height, 0, 0, img_new.width, img_new.height);
+    return img_new;
 }
 
+// function scaleImageUp(img, factor=1) {
+//     let w = img.width;
+//     let h = img.height;
+//     let img_new = createImage(w * factor, h * factor);
+//     img.loadPixels();
+//     img_new.loadPixels();
+//     let i_old, i_new;
+//     for (let i=0; i<w; i++) {
+//         for (let j=0; j<h; j++) {
+//             i_old = i * w + j;
+//             for (let x=0; x<factor; x++) {
+//                 for (let y=0; y<factor; y++) {
+//                     i_new = (i * factor + x) * w + (j * factor + y);
+//                     img_new.pixels
+//                 }
+//             }
+//         }
+//     }
+//     img_new.updatePixels();
+
+// }
+
 function myImage(img) {
-    let scaled_width = max(1, USE_DIM)
-    let scaled_height = max(1, USE_DIM)
+    let scaled_width = max(1, USE_DIM);
+    let scaled_height = max(1, USE_DIM);
     if (img.width != scaled_width || img.height != scaled_height) {
-        let img_scaled = copyImage(img)
-        img_scaled.resize(scaled_width, scaled_height)
-        image(img_scaled, 0, 0)
+        let img_scaled = img.get();
+        img_scaled.resize(scaled_width, scaled_height);
+        image(img_scaled, 0, 0);
     } else {
-        image(img, 0, 0)
+        image(img, 0, 0);
     }
 }
 
@@ -116,9 +138,9 @@ function get_expand_width_textsize(graphic, str, max_width) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-const WELCOME_GENERATOR = 0;
-const HEADER_GENERATOR = 1;
-const SIDE_PIC_GENERATOR = 2;
+const WELCOME_GENERATOR_TAB = 0;
+const HEADER_GENERATION_TAB = 1;
+const SIDE_PIC_GENERATION_TAB = 2;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -134,7 +156,7 @@ preload = function() {
 
 setup = function() {
 
-    tool_state = WELCOME_GENERATOR;
+    tool_state = WELCOME_GENERATOR_TAB;
 
     div_navigation = 'sideNavigation';
     div_preview = 'canvasForHTML';
@@ -173,6 +195,13 @@ setup = function() {
     button_header_generator.style('height', 70 + 'px');
     button_header_generator.mousePressed(nav_header_generator);
 
+    button_side_pic_generator = createButton('SKULL<br>SIDE PIC');
+    button_side_pic_generator.parent(div_navigation);
+    button_side_pic_generator.position(0, 200);
+    button_side_pic_generator.style('width', 210 + 'px');
+    button_side_pic_generator.style('height', 70 + 'px');
+    button_side_pic_generator.mousePressed(nav_side_pic_generator);
+
     // tool(s)
 
     button_generate = createButton('GENERATE');
@@ -185,33 +214,15 @@ setup = function() {
     button_download_welcome.position(15, 600);
     button_download_welcome.mousePressed(run_welcome_download);
 
-    msg_download_prompt = createElement('h2', 'IMAGE DOWNLOADS');
-    msg_download_prompt.parent(div_preview);
-    msg_download_prompt.position(15, 550);
-    msg_download_prompt.hide()
-
     button_download_header_all = createButton('DOWNLOAD IMAGES');
     button_download_header_all.parent(div_preview);
     button_download_header_all.position(15, 600);
     button_download_header_all.mousePressed(run_header_download_all);
 
-    // button_download_header_1 = createButton('HEADER');
-    // button_download_header_1.parent(div_preview);
-    // button_download_header_1.position(15, 600);
-    // button_download_header_1.style('width', 90 + 'px');
-    // button_download_header_1.mousePressed(run_header_download_1);
-
-    // button_download_header_2 = createButton('1x1A');
-    // button_download_header_2.parent(div_preview);
-    // button_download_header_2.position(120, 600);
-    // button_download_header_2.style('width', 90 + 'px');
-    // button_download_header_2.mousePressed(run_header_download_2);
-
-    // button_download_header_3 = createButton('1x1B');
-    // button_download_header_3.parent(div_preview);
-    // button_download_header_3.position(225, 600);
-    // button_download_header_3.style('width', 90 + 'px');
-    // button_download_header_3.mousePressed(run_header_download_3);
+    button_download_side_pic = createButton('DOWNLOAD IMAGE');
+    button_download_side_pic.parent(div_preview);
+    button_download_side_pic.position(15, 600);
+    button_download_side_pic.mousePressed(run_side_pic_download);
 
     button_restart = createButton('RESTART');
     button_restart.parent(div_preview);
@@ -221,27 +232,32 @@ setup = function() {
     err_number = createElement('h3', 'INVALID SKULL NUMBER!');
     err_number.parent(div_preview);
     err_number.position(15, 450);
-    err_number.hide()
+    err_number.hide();
 
     err_handle = createElement('h3', 'INVALID TWITTER HANDLE!');
     err_handle.parent(div_preview);
     err_handle.position(15, 450);
-    err_handle.hide()
+    err_handle.hide();
 
     err_longname = createElement('h3', 'INVALID TWITTER LONG NAME!');
     err_longname.parent(div_preview);
     err_longname.position(15, 450);
-    err_longname.hide()
+    err_longname.hide();
 
     msg_processing = createElement('h2', 'SKULLIFYING A WELCOME...');
     msg_processing.parent(div_preview);
     msg_processing.position(15, 525);
-    msg_processing.hide()
+    msg_processing.hide();
 
     msg_header_preview = createElement('h2', 'PREVIEW IN 500x500. ACTUAL IMAGES<br>ARE 1500x500, 1000x1000 and 1000x1000.');
     msg_header_preview.parent(div_preview);
     msg_header_preview.position(15, 425);
-    msg_header_preview.hide()
+    msg_header_preview.hide();
+
+    msg_side_pic_preview = createElement('h2', 'PREVIEW IN 240x240.<br>ACTUAL IMAGE IN 336x336.');
+    msg_side_pic_preview.parent(div_preview);
+    msg_side_pic_preview.position(15, 425);
+    msg_side_pic_preview.hide();
 
     frameRate(gif_frame_rate);
     noLoop();
@@ -259,7 +275,7 @@ base_frame_count = 0;
 
 draw = function() {
 
-    if (tool_state == WELCOME_GENERATOR) {
+    if (tool_state == WELCOME_GENERATOR_TAB) {
 
         if (!is_looping_state && isLooping()) {
             base_frame_count = frameCount;
@@ -313,7 +329,7 @@ draw = function() {
             is_preview_state = true;
         }
 
-    } else if (tool_state == HEADER_GENERATOR) {
+    } else if (tool_state == HEADER_GENERATION_TAB) {
 
         if (!is_looping_state && isLooping()) {
             is_looping_state = true;
@@ -324,11 +340,7 @@ draw = function() {
         }
 
         if (is_preview_state && p5_canvas.parent() != div_preview) {
-            msg_download_prompt.show();
             button_download_header_all.show();
-            // button_download_header_1.show();
-            // button_download_header_2.show();
-            // button_download_header_3.show();
             msg_header_preview.show()
             msg_processing.hide();
             resizeCanvas(PREVIEW_DIM, PREVIEW_DIM);
@@ -349,6 +361,40 @@ draw = function() {
         } else {
             draw_header_generator_splash();
         }
+
+    } else if (tool_state == SIDE_PIC_GENERATION_TAB) {
+
+        if (!is_looping_state && isLooping()) {
+            is_looping_state = true;
+
+        } else if (is_looping_state && !isLooping()) {
+            is_looping_state = false;
+            is_preview_state = false;
+        }
+
+        if (is_preview_state && p5_canvas.parent() != div_preview) {
+            button_download_side_pic.show();
+            msg_side_pic_preview.show()
+            msg_processing.hide();
+            resizeCanvas(PREVIEW_DIM, PREVIEW_DIM);
+            p5_canvas.parent(div_preview);
+        }
+
+        if (isLooping()) {
+            clear();
+            if (side_pic_generation.preview_produced) {
+                myImage(side_pic_generation.preview_image);
+            } else {
+                side_pic_generation.update();
+                if (side_pic_generation.preview_produced) {
+                    USE_DIM = PREVIEW_DIM;
+                    is_preview_state = true;
+                }
+            }
+        } else {
+            draw_side_pic_generator_splash();
+        }
+
     }
 }
 
@@ -365,13 +411,10 @@ function draw_welcome_generator_splash() {
     input_longname.value('');
     msg_processing.hide();
     msg_header_preview.hide();
+    msg_side_pic_preview.hide();
     button_generate.show();
     button_download_welcome.hide();
-    msg_download_prompt.hide();
     button_download_header_all.hide();
-    // button_download_header_1.hide();
-    // button_download_header_2.hide();
-    // button_download_header_3.hide();
     button_restart.hide();
 }
 
@@ -386,13 +429,28 @@ function draw_header_generator_splash() {
     input_longname.value('');
     msg_processing.hide();
     msg_header_preview.hide();
+    msg_side_pic_preview.hide();
     button_generate.show();
     button_download_welcome.hide();
-    msg_download_prompt.hide();
     button_download_header_all.hide();
-    // button_download_header_1.hide();
-    // button_download_header_2.hide();
-    // button_download_header_3.hide();
+    button_restart.hide();
+}
+
+function draw_side_pic_generator_splash() {
+    document.getElementById('tool_title').innerHTML = 'SKULL<br>SIDE PIC';
+    background(0);
+    input_number.show();
+    input_number.value('');
+    input_handle.hide();
+    input_handle.value('');
+    input_longname.hide();
+    input_longname.value('');
+    msg_processing.hide();
+    msg_header_preview.hide();
+    msg_side_pic_preview.hide();
+    button_generate.show();
+    button_download_welcome.hide();
+    button_download_side_pic.hide();
     button_restart.hide();
 }
 
@@ -405,10 +463,12 @@ var header_generation;
 var skull_number;
 
 function run_generate() {
-    if (tool_state == WELCOME_GENERATOR) {
+    if (tool_state == WELCOME_GENERATOR_TAB) {
         run_welcome_generate();
-    } else if (tool_state == HEADER_GENERATOR) {
+    } else if (tool_state == HEADER_GENERATION_TAB) {
         run_header_generate();
+    } else if (tool_state == SIDE_PIC_GENERATION_TAB) {
+        run_side_pic_generate();
     }
 }
 
@@ -449,6 +509,13 @@ function run_welcome_generate() {
     loop();
 }
 
+function run_welcome_download() {
+    console.log('downloading gif')
+    resizeCanvas(REF_DIM, REF_DIM);
+    capturer.save();
+    resizeCanvas(PREVIEW_DIM, PREVIEW_DIM);
+}
+
 function run_header_generate() {
 
     skull_number = parseInt(input_number.value());
@@ -470,15 +537,26 @@ function run_header_generate() {
 
 }
 
-function run_welcome_download() {
-    console.log('downloading gif')
-    resizeCanvas(REF_DIM, REF_DIM);
-    capturer.save();
-    resizeCanvas(PREVIEW_DIM, PREVIEW_DIM);
+function run_side_pic_generate() {
+
+    skull_number = parseInt(input_number.value());
+
+    if (input_number.value() == '' || skull_number == undefined || skull_number < 1 || skull_number > 10000) {
+        // console.log('invalid skull number input');
+        err_number.show();
+        return;
+    }
+
+    input_number.hide();
+    button_generate.hide();
+    err_number.hide();
+    button_restart.show();
+
+    side_pic_generation = new SidePicGeneration(skull_number);
+    side_pic_generation.produce()
+    loop();
+
 }
-
-
-run_header_download_all
 
 async function run_header_download_all() {
     console.log('downloading image 1')
@@ -491,20 +569,10 @@ async function run_header_download_all() {
     header_generation.img_square_b.save('CS_1x1B_' + header_generation.skull_number, 'png');
 }
 
-// function run_header_download_1() {
-//     console.log('downloading image 1')
-//     header_generation.img_header.save('CS_Twitter_Header_' + header_generation.skull_number, 'png');
-// }
-
-// function run_header_download_2() {
-//     console.log('downloading image 2')
-//     header_generation.img_square_a.save('CS_1x1A_' + header_generation.skull_number, 'png');
-// }
-
-// function run_header_download_3() {
-//     console.log('downloading image 3')
-//     header_generation.img_square_b.save('CS_1x1B_' + header_generation.skull_number, 'png');
-// }
+function run_side_pic_download() {
+    console.log('downloading image')
+    side_pic_generation.img_side_pic_dl.save('CS_side_pic_' + side_pic_generation.skull_number, 'png');
+}
 
 function run_welcome_restart() {
     // console.log('restarting');
@@ -519,17 +587,62 @@ function run_welcome_restart() {
 }
 
 function nav_welcome_generator() {
-    tool_state = WELCOME_GENERATOR;
+    tool_state = WELCOME_GENERATOR_TAB;
     run_welcome_restart();
 }
 
 function nav_header_generator() {
-    tool_state = HEADER_GENERATOR;
+    tool_state = HEADER_GENERATION_TAB;
     run_welcome_restart();
 }
 
+function nav_side_pic_generator() {
+    tool_state = SIDE_PIC_GENERATION_TAB;
+    run_welcome_restart();
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+class SidePicGeneration {
+    constructor(skull_number) {
+        this.skull_number = skull_number;
+        this.loaded_side_pic = false;
+        this.loaded_og_pic = false;
+        this.preview_produced = false;
+    }
+    produce() {
+        this.preview_image = createGraphics(480, 480);
+        console.log('generating side pic', this.skull_number);
+        let img_base_url = 'https://raw.githubusercontent.com/KobeLincoln/cryptoskull_stuff/main/exports/';
+        this.img_og_pic = loadImage(img_base_url + 'cryptoskulls_24/' + this.skull_number + '.png', () => {this.loaded_og_pic = true;});
+        this.img_side_pic = loadImage(img_base_url + 'cryptoskulls_24_profile/' + this.skull_number + '.png', () => {this.loaded_side_pic = true;});
+    }
+    update() {
+        if (this.loaded_side_pic && this.loaded_og_pic && !this.preview_produced) {
+            console.log('generating preview image');
+
+            this.img_side_pic_dl = expand(this.img_side_pic, 14);
+
+            let img_og_pic_scaled = expand(this.img_og_pic, 10);
+            let img_side_pic_scaled = expand(this.img_side_pic, 10);
+            this.preview_image.image(img_side_pic_scaled, 260, 0);
+            this.preview_image.image(img_og_pic_scaled, 0, 0);
+
+            // this.preview_image.textAlign(CENTER, CENTER);
+            // this.preview_image.textFont(font_cs);
+            // this.preview_image.fill('#c20e1a');
+            // this.preview_image.textSize(150);
+            // this.preview_image.translate(PREVIEW_DIM/2, PREVIEW_DIM/3);
+            // this.preview_image.rotate(-QUARTER_PI/2);
+            // this.preview_image.text('PREVIEW', 0, 0);
+
+            this.preview_produced = true;
+        } else {
+            // console.log(this.loaded_side_pic, this.preview_produced)
+        }
+    }
+}
 
 
 class HeaderGeneration {
@@ -551,9 +664,9 @@ class HeaderGeneration {
     update() {
         if (this.loaded_header && this.loaded_square_a && this.loaded_square_b && !this.preview_produced) {
             console.log('generating preview image')
-            let img_header_scaled = copyImage(this.img_header);
-            let img_square_a_scaled = copyImage(this.img_square_a);
-            let img_square_b_scaled = copyImage(this.img_square_b);
+            let img_header_scaled = this.img_header.get();
+            let img_square_a_scaled = this.img_square_a.get();
+            let img_square_b_scaled = this.img_square_b.get();
 
             let half_dim = floor(PREVIEW_DIM / 2) - 1;
             let third_dim = floor(PREVIEW_DIM / 3);
@@ -576,7 +689,7 @@ class HeaderGeneration {
 
             this.preview_produced = true;
         } else {
-            console.log(this.loaded_header, this.loaded_square_a, this.loaded_square_b, this.preview_produced)
+            // console.log(this.loaded_header, this.loaded_square_a, this.loaded_square_b, this.preview_produced)
         }
     }
 }
