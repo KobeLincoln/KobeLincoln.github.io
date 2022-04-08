@@ -514,27 +514,27 @@ function draw_welcome_generator_splash() {
     draw_splash_reset();
     input_handle.show();
     input_longname.show();
-    document.getElementById('tool_title').innerHTML = 'WELCOME<br>GENERATOR';
+    document.getElementById('tool_title').innerHTML = 'WELCOME<br>GENERATOR<br><br>credit<br><a href="https://twitter.com/mdilone" target="_blank">@mdilone</a>';
 }
 
 function draw_header_generator_splash() {
     draw_splash_reset();
-    document.getElementById('tool_title').innerHTML = 'SKULL<br>CREATOR';
+    document.getElementById('tool_title').innerHTML = 'SKULL<br>CREATOR<br><br>credit<br><a href="https://twitter.com/mdilone" target="_blank">@mdilone</a>';
 }
 
 function draw_side_pic_generator_splash() {
     draw_splash_reset();
-    document.getElementById('tool_title').innerHTML = 'SKULL<br>SIDE PIC';
+    document.getElementById('tool_title').innerHTML = 'SKULL<br>SIDE PIC<br><br>credit<br><a href="https://twitter.com/KobeDLincoln" target="_blank">@KobeDLincoln</a>';
 }
 
 function draw_vector_generator_splash() {
     draw_splash_reset();
-    document.getElementById('tool_title').innerHTML = 'SCALABLE<br>PRINT VECTORS';
+    document.getElementById('tool_title').innerHTML = 'SCALABLE<br>PRINT VECTORS<br><br>credit<br><a href="https://twitter.com/KobeDLincoln" target="_blank">@KobeDLincoln</a>';
 }
 
 function draw_bunny_generator_splash() {
     draw_splash_reset();
-    document.getElementById('tool_title').innerHTML = 'SKULL<br>EASTER BUNNY';
+    document.getElementById('tool_title').innerHTML = 'SKULL<br>EASTER BUNNY<br><br>credit<br><a href="https://twitter.com/Sbreyen" target="_blank">@Sbreyen</a>';
 }
 
 
