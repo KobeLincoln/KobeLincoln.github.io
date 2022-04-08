@@ -118,6 +118,7 @@ const WELCOME_GENERATOR_TAB = 0;
 const HEADER_GENERATION_TAB = 1;
 const SIDE_PIC_GENERATION_TAB = 2;
 const VECTOR_GENERATION_TAB = 3;
+const BUNNY_GENERATION_TAB = 4;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -186,6 +187,13 @@ setup = function() {
     button_vector_generator.style('height', 70 + 'px');
     button_vector_generator.mousePressed(nav_vector_generator);
 
+    button_bunny_generator = createButton('SKULL<br>EASTER BUNNY');
+    button_bunny_generator.parent(div_navigation);
+    button_bunny_generator.position(0, 400);
+    button_bunny_generator.style('width', 210 + 'px');
+    button_bunny_generator.style('height', 70 + 'px');
+    button_bunny_generator.mousePressed(nav_bunny_generator);
+
     // tool(s)
 
     button_generate = createButton('GENERATE');
@@ -212,6 +220,11 @@ setup = function() {
     button_download_vector.parent(div_preview);
     button_download_vector.position(15, 600);
     button_download_vector.mousePressed(run_vector_download);
+
+    button_download_bunny = createButton('DOWNLOAD PNG & SVG');
+    button_download_bunny.parent(div_preview);
+    button_download_bunny.position(15, 600);
+    button_download_bunny.mousePressed(run_bunny_download);
 
     button_restart = createButton('RESTART');
     button_restart.parent(div_preview);
@@ -257,6 +270,11 @@ setup = function() {
     msg_vector_preview.parent(div_preview);
     msg_vector_preview.position(15, 525);
     msg_vector_preview.hide();
+
+    msg_bunny_preview = createElement('h2', 'PREVIEW IN 240x240.<br>ACTUAL IMAGE IN 336x336.');
+    msg_bunny_preview.parent(div_preview);
+    msg_bunny_preview.position(15, 425);
+    msg_bunny_preview.hide();
 
     frameRate(gif_frame_rate);
     noLoop();
@@ -427,6 +445,39 @@ draw = function() {
             draw_vector_generator_splash();
         }
 
+    } else if (tool_state == BUNNY_GENERATION_TAB) {
+
+        if (!is_looping_state && isLooping()) {
+            is_looping_state = true;
+
+        } else if (is_looping_state && !isLooping()) {
+            is_looping_state = false;
+            is_preview_state = false;
+        }
+
+        if (is_preview_state && p5_canvas.parent() != div_preview) {
+            button_download_bunny.show();
+            msg_bunny_preview.show()
+            msg_processing.hide();
+            resizeCanvas(PREVIEW_DIM, PREVIEW_DIM);
+            p5_canvas.parent(div_preview);
+        }
+
+        if (isLooping()) {
+            clear();
+            if (bunny_generation.preview_produced) {
+                myImage(bunny_generation.preview_image);
+            } else {
+                bunny_generation.update();
+                if (bunny_generation.preview_produced) {
+                    USE_DIM = PREVIEW_DIM;
+                    is_preview_state = true;
+                }
+            }
+        } else {
+            draw_bunny_generator_splash();
+        }
+
     }
 
 }
@@ -450,10 +501,12 @@ function draw_splash_reset() {
     msg_header_preview.hide();
     msg_side_pic_preview.hide();
     msg_vector_preview.hide();
+    msg_bunny_preview.hide();
     button_download_welcome.hide();
     button_download_header_all.hide();
     button_download_side_pic.hide();
     button_download_vector.hide();
+    button_download_bunny.hide();
     button_restart.hide();
 }
 
@@ -479,6 +532,11 @@ function draw_vector_generator_splash() {
     document.getElementById('tool_title').innerHTML = 'SCALABLE<br>PRINT VECTORS';
 }
 
+function draw_bunny_generator_splash() {
+    draw_splash_reset();
+    document.getElementById('tool_title').innerHTML = 'SKULL<br>EASTER BUNNY';
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -496,6 +554,8 @@ function run_generate() {
         run_side_pic_generate();
     } else if (tool_state == VECTOR_GENERATION_TAB) {
         run_vector_generate();
+    } else if (tool_state == BUNNY_GENERATION_TAB) {
+        run_bunny_generate();
     }
 }
 
@@ -631,6 +691,33 @@ function run_vector_generate() {
 
 }
 
+function run_bunny_generate() {
+
+    skull_number = parseInt(input_number.value());
+
+    if (input_number.value() == '' || skull_number == undefined || skull_number < 1 || skull_number > 10000 || isNaN(skull_number)) {
+        // console.log('invalid skull number input');
+        err_number.show();
+        return;
+    }
+
+    if (special_tokens.indexOf(skull_number) !== -1) {
+        err_lord.show();
+        return;
+    }
+
+    input_number.hide();
+    button_generate.hide();
+    err_number.hide();
+    err_lord.hide();
+    button_restart.show();
+
+    bunny_generation = new BunnyGeneration(skull_number);
+    bunny_generation.produce();
+    loop();
+
+}
+
 async function run_header_download_all() {
     console.log('downloading image 1');
     header_generation.img_header.save('CS_Twitter_Header_' + header_generation.skull_number, 'png');
@@ -668,6 +755,20 @@ async function run_vector_download() {
     document.removeChild(anchor_2);
 }
 
+async function run_bunny_download() {
+    console.log('downloading png');
+    bunny_generation.img_bunny_dl.save('CS_bunny_' + bunny_generation.skull_number, 'png');
+
+    var anchor_1 = document.createElement('a');
+    anchor_1.href = bunny_generation.url_svg_o;
+    anchor_1.target = '_blank';
+    anchor_1.download = 'CS_bunny_' + bunny_generation.skull_number + '.svg';
+    await sleep(1000);
+    console.log('downloading svg');
+    anchor_1.click();
+    document.removeChild(anchor_1);
+}
+
 function run_welcome_restart() {
     // console.log('restarting');
     is_looping_state = false;
@@ -697,6 +798,11 @@ function nav_side_pic_generator() {
 
 function nav_vector_generator() {
     tool_state = VECTOR_GENERATION_TAB;
+    run_welcome_restart();
+}
+
+function nav_bunny_generator() {
+    tool_state = BUNNY_GENERATION_TAB;
     run_welcome_restart();
 }
 
@@ -885,7 +991,7 @@ class SidePicGeneration {
         this.preview_produced = false;
     }
     produce() {
-        this.preview_image = createGraphics(480, 480);
+        this.preview_image = createGraphics(PREVIEW_DIM, PREVIEW_DIM);
         console.log('generating side pic', this.skull_number);
         let img_base_url = 'https://raw.githubusercontent.com/KobeLincoln/cryptoskull_stuff/main/exports/';
         this.img_og_pic = loadImage(img_base_url + 'cryptoskulls_24/' + this.skull_number + '.png', () => {this.loaded_og_pic = true;});
@@ -916,7 +1022,7 @@ class VectorGeneration {
         this.preview_produced = false;
     }
     produce() {
-        this.preview_image = createGraphics(480, 480);
+        this.preview_image = createGraphics(PREVIEW_DIM, PREVIEW_DIM);
         console.log('generating vector', this.skull_number);
         let img_base_url = 'https://raw.githubusercontent.com/KobeLincoln/cryptoskull_stuff/main/exports/';
         this.img_og_pic = loadImage(img_base_url + 'cryptoskulls_24/' + this.skull_number + '.png', () => {this.loaded_og_pic = true;});
@@ -936,3 +1042,35 @@ class VectorGeneration {
     }
 }
 
+class BunnyGeneration {
+    constructor(skull_number) {
+        this.skull_number = skull_number;
+        this.loaded_bunny = false;
+        this.loaded_og_pic = false;
+        this.preview_produced = false;
+    }
+    produce() {
+        this.preview_image = createGraphics(PREVIEW_DIM, PREVIEW_DIM);
+        console.log('generating bunny pic', this.skull_number);
+        let img_base_url = 'https://raw.githubusercontent.com/KobeLincoln/cryptoskull_stuff/main/exports/';
+        this.img_og_pic = loadImage(img_base_url + 'cryptoskulls_24/' + this.skull_number + '.png', () => {this.loaded_og_pic = true;});
+        this.img_bunny = loadImage(img_base_url + 'bunny/' + this.skull_number + '.png', () => {this.loaded_bunny = true;});
+        this.url_svg_o = 'img/exports/bunny_svg/' + this.skull_number + '.svg';
+    }
+    update() {
+        if (this.loaded_bunny && this.loaded_og_pic && !this.preview_produced) {
+            console.log('generating preview image');
+
+            this.img_bunny_dl = expand(this.img_bunny, 14);
+
+            let img_og_pic_scaled = expand(this.img_og_pic, 10);
+            let img_bunny_scaled = expand(this.img_bunny, 10);
+            this.preview_image.image(img_bunny_scaled, 260, 0);
+            this.preview_image.image(img_og_pic_scaled, 0, 0);
+
+            this.preview_produced = true;
+        } else {
+            // console.log(this.loaded_bunny, this.preview_produced)
+        }
+    }
+}
