@@ -161,35 +161,35 @@ setup = function() {
 
     button_welcome_generator = createButton('WELCOME<br>GENERATOR');
     button_welcome_generator.parent(div_navigation);
-    button_welcome_generator.position(0, 0);
+    button_welcome_generator.position(0, 50);
     button_welcome_generator.style('width', 210 + 'px');
     button_welcome_generator.style('height', 70 + 'px');
     button_welcome_generator.mousePressed(nav_welcome_generator);
 
     button_header_generator = createButton('SKULL<br>CREATOR');
     button_header_generator.parent(div_navigation);
-    button_header_generator.position(0, 100);
+    button_header_generator.position(0, 135);
     button_header_generator.style('width', 210 + 'px');
     button_header_generator.style('height', 70 + 'px');
     button_header_generator.mousePressed(nav_header_generator);
 
     button_side_pic_generator = createButton('SKULL<br>SIDE PIC');
     button_side_pic_generator.parent(div_navigation);
-    button_side_pic_generator.position(0, 200);
+    button_side_pic_generator.position(0, 220);
     button_side_pic_generator.style('width', 210 + 'px');
     button_side_pic_generator.style('height', 70 + 'px');
     button_side_pic_generator.mousePressed(nav_side_pic_generator);
 
     button_vector_generator = createButton('SCALABLE<br>PRINT VECTORS');
     button_vector_generator.parent(div_navigation);
-    button_vector_generator.position(0, 300);
+    button_vector_generator.position(0, 305);
     button_vector_generator.style('width', 210 + 'px');
     button_vector_generator.style('height', 70 + 'px');
     button_vector_generator.mousePressed(nav_vector_generator);
 
     button_bunny_generator = createButton('SKULL<br>EASTER BUNNY');
     button_bunny_generator.parent(div_navigation);
-    button_bunny_generator.position(0, 400);
+    button_bunny_generator.position(0, 390);
     button_bunny_generator.style('width', 210 + 'px');
     button_bunny_generator.style('height', 70 + 'px');
     button_bunny_generator.mousePressed(nav_bunny_generator);
