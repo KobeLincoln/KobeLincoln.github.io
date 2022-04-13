@@ -12,13 +12,49 @@ const special_tokens = [9, 19, 20, 24, 27, 36, 41, 42, 43, 70];
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// function sleep(ms) {
-//     return new Promise(resolve => setTimeout(resolve, ms));
-// }
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
-sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+// https://stackoverflow.com/a/52127218
+const partial = (func, ...args) => (...rest) => func(...args, ...rest);
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
+// ELEMENT CREATION HELPERS ////////////////////////////////////////////////////////////////////////
+
+function myInput(placeholder_text, input_parent, input_position) {
+    let input = createInput();
+    input.parent(input_parent);
+    input.attribute('placeholder', placeholder_text);
+    input.position(input_position[0], input_position[1]);
+    return input;
+}
+
+function myButton(display_text, button_parent, button_position, button_function, button_dimensions=[0,0]) {
+    let button = createButton(display_text);
+    button.parent(button_parent);
+    button.position(button_position[0], button_position[1]);
+    if (button_dimensions[0] > 0) {
+        button.style('width', button_dimensions[0] + 'px');
+    }
+    if (button_dimensions[1] > 0) {
+        button.style('height', button_dimensions[1] + 'px');
+    }
+    button.mousePressed(button_function);
+    return button;
+}
+
+function myElement(display_text, element_parent, element_position, html_tag) {
+    let element = createElement(html_tag, display_text);
+    element.parent(element_parent);
+    element.position(element_position[0], element_position[1]);
+    element.hide();
+    return element;
+}
+
+function show_error(error_text) {
+    msg_error.html(error_text);
+    msg_error.show();
+}
+
+// IMAGE MANIPULATION HELPERS //////////////////////////////////////////////////////////////////////
 
 function myImage(img) {
     let scaled_width = max(1, USE_DIM);
@@ -31,8 +67,6 @@ function myImage(img) {
         image(img, 0, 0);
     }
 }
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
 
 function get_skull_image(skull_number) {
     let i_cs = skull_dim * (skull_number % 100)
@@ -112,15 +146,63 @@ function get_expand_width_textsize(graphic, str, max_width) {
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
+// TOOL STATES /////////////////////////////////////////////////////////////////////////////////////
+
+const N_TOOLS = 5;
 
 const WELCOME_GENERATOR_TAB = 0;
 const HEADER_GENERATION_TAB = 1;
 const SIDE_PIC_GENERATION_TAB = 2;
 const VECTOR_GENERATION_TAB = 3;
 const BUNNY_GENERATION_TAB = 4;
+const FLESH_GENERATION_TAB = 5;
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
+const tool_nav_btn_text = [
+    'WELCOME<br>GENERATOR',
+    'SKULL<br>CREATOR',
+    'SKULL<br>SIDE PIC',
+    'SCALABLE<br>PRINT VECTORS',
+    'SKULL<br>EASTER BUNNY',
+    'SKULL<br>FLESH TOOL',
+];
+
+const tool_credits = [
+    '<a href="https://twitter.com/mdilone" target="_blank">@mdilone</a>',
+    '<a href="https://twitter.com/mdilone" target="_blank">@mdilone</a>',
+    '<a href="https://twitter.com/KobeDLincoln" target="_blank">@KobeDLincoln</a>',
+    '<a href="https://twitter.com/KobeDLincoln" target="_blank">@KobeDLincoln</a>',
+    '<a href="https://twitter.com/Sbreyen" target="_blank">@Sbreyen</a>',
+    '<a href="https://twitter.com/jbray808" target="_blank">@jbray808</a>',
+];
+
+const tool_processing_msg_text = [
+    'SKULLIFYING A WELCOME...',
+    'RETRIEVING IMAGES...',
+    'RETRIEVING IMAGE...',
+    'RETRIEVING VECTORS...',
+    'BUNNIFYING A SKULL...',
+    'RETRIEVING SKULL CUTOUT...'
+];
+
+const tool_preview_msg_text = [
+    'NOTE: GIF DOWNLOAD MAY TAKE ABOUT<br>20 SECONDS TO COMPLETE.',
+    'PREVIEW IN 500x500. ACTUAL IMAGES<br>ARE 1500x500, 1000x1000 and 1000x1000.',
+    'PREVIEW IN 240x240.<br>ACTUAL IMAGE IN 336x336.',
+    'REGULAR AND TRANSPARENT BACKGROUND<br>VECTORS AVAILABLE FOR DOWNLOAD.',
+    'PREVIEW IN 240x240.<br>ACTUAL IMAGE IN 336x336.',
+    'PREVIEW MESSAGE PLACEHOLDER.',
+];
+
+const tool_dl_btn_text = [
+    'DOWNLOAD GIF',
+    'DOWNLOAD IMAGES',
+    'DOWNLOAD IMAGE',
+    'DOWNLOAD VECTORS',
+    'DOWNLOAD PNG & SVG',
+    'DOWNLOAD IMAGE',
+];
+
+// MAIN P5 FUNCTIONS ///////////////////////////////////////////////////////////////////////////////
 
 var p5_canvas;
 
@@ -136,152 +218,44 @@ setup = function() {
 
     tool_state = WELCOME_GENERATOR_TAB;
 
+    // divs
     div_navigation = 'sideNavigation';
     div_preview = 'canvasForHTML';
     div_capture = 'canvasForGif';
+
+    // navigation buttons
+    let nav_btn_dims = [210, 60];
+    nav_buttons = [];
+    for (let i=0; i<N_TOOLS; i++) {
+        let pos_y = 40 + 70 * i;
+        nav_buttons.push(myButton(tool_nav_btn_text[i], div_navigation, [0, pos_y], partial(run_restart, i), nav_btn_dims));
+    }
+
+    // text inputs
+    input_number = myInput('ENTER SKULL #', div_preview, [15, 100]);
+    input_handle = myInput('TWITTER @HANDLE', div_preview, [15, 175]);
+    input_longname = myInput('TWITTER LONG NAME', div_preview, [15, 250]);
+
+    // tool buttons
+    let tool_btn_dims = [240, 60];
+    button_generate = myButton('GENERATE', div_preview, [15, 350], run_generate, tool_btn_dims);
+    button_restart = myButton('RESTART', div_preview, [275, 600], run_restart, tool_btn_dims);
+    button_download = myButton('--DOWNLOAD--', div_preview, [15, 600], run_download, tool_btn_dims);
+
+    // tool messages
+    let msg_pos = [15, 425];
+    msg_error = myElement('--ERROR--', div_preview, msg_pos, 'h3');
+    msg_processing = myElement('--PROCESSING--', div_preview, msg_pos, 'h2');
+    msg_preview = myElement('--PREVIEW--', div_preview, [15, 525], 'h2');
+    message_elements = [msg_error, msg_processing, msg_preview];
+
+    // canvas
     p5_canvas = createCanvas(REF_DIM, REF_DIM);
     p5_canvas.parent(div_capture);
-
-    input_number = createInput();
-    input_number.parent(div_preview);
-    input_number.attribute('placeholder', 'ENTER SKULL #');
-    input_number.position(15, 100);
-
-    input_handle = createInput();
-    input_handle.attribute('placeholder', 'TWITTER @HANDLE');
-    input_handle.parent(div_preview);
-    input_handle.position(15, 175);
-
-    input_longname = createInput();
-    input_longname.attribute('placeholder', 'TWITTER LONG NAME');
-    input_longname.parent(div_preview);
-    input_longname.position(15, 250);
-
-    // navigation
-
-    button_welcome_generator = createButton('WELCOME<br>GENERATOR');
-    button_welcome_generator.parent(div_navigation);
-    button_welcome_generator.position(0, 50);
-    button_welcome_generator.style('width', 210 + 'px');
-    button_welcome_generator.style('height', 70 + 'px');
-    button_welcome_generator.mousePressed(nav_welcome_generator);
-
-    button_header_generator = createButton('SKULL<br>CREATOR');
-    button_header_generator.parent(div_navigation);
-    button_header_generator.position(0, 135);
-    button_header_generator.style('width', 210 + 'px');
-    button_header_generator.style('height', 70 + 'px');
-    button_header_generator.mousePressed(nav_header_generator);
-
-    button_side_pic_generator = createButton('SKULL<br>SIDE PIC');
-    button_side_pic_generator.parent(div_navigation);
-    button_side_pic_generator.position(0, 220);
-    button_side_pic_generator.style('width', 210 + 'px');
-    button_side_pic_generator.style('height', 70 + 'px');
-    button_side_pic_generator.mousePressed(nav_side_pic_generator);
-
-    button_vector_generator = createButton('SCALABLE<br>PRINT VECTORS');
-    button_vector_generator.parent(div_navigation);
-    button_vector_generator.position(0, 305);
-    button_vector_generator.style('width', 210 + 'px');
-    button_vector_generator.style('height', 70 + 'px');
-    button_vector_generator.mousePressed(nav_vector_generator);
-
-    button_bunny_generator = createButton('SKULL<br>EASTER BUNNY');
-    button_bunny_generator.parent(div_navigation);
-    button_bunny_generator.position(0, 390);
-    button_bunny_generator.style('width', 210 + 'px');
-    button_bunny_generator.style('height', 70 + 'px');
-    button_bunny_generator.mousePressed(nav_bunny_generator);
-
-    // tool(s)
-
-    button_generate = createButton('GENERATE');
-    button_generate.parent(div_preview);
-    button_generate.position(15, 350);
-    button_generate.mousePressed(run_generate);
-
-    button_download_welcome = createButton('DOWNLOAD GIF');
-    button_download_welcome.parent(div_preview);
-    button_download_welcome.position(15, 600);
-    button_download_welcome.mousePressed(run_welcome_download);
-
-    button_download_header_all = createButton('DOWNLOAD IMAGES');
-    button_download_header_all.parent(div_preview);
-    button_download_header_all.position(15, 600);
-    button_download_header_all.mousePressed(run_header_download_all);
-
-    button_download_side_pic = createButton('DOWNLOAD IMAGE');
-    button_download_side_pic.parent(div_preview);
-    button_download_side_pic.position(15, 600);
-    button_download_side_pic.mousePressed(run_side_pic_download);
-
-    button_download_vector = createButton('DOWNLOAD VECTORS');
-    button_download_vector.parent(div_preview);
-    button_download_vector.position(15, 600);
-    button_download_vector.mousePressed(run_vector_download);
-
-    button_download_bunny = createButton('DOWNLOAD PNG & SVG');
-    button_download_bunny.parent(div_preview);
-    button_download_bunny.position(15, 600);
-    button_download_bunny.mousePressed(run_bunny_download);
-
-    button_restart = createButton('RESTART');
-    button_restart.parent(div_preview);
-    button_restart.position(330, 600);
-    button_restart.mousePressed(run_welcome_restart);
-
-    err_number = createElement('h3', 'INVALID SKULL NUMBER!');
-    err_number.parent(div_preview);
-    err_number.position(15, 450);
-    err_number.hide();
-
-    err_lord = createElement('h3', 'NO LORDS! ONLY PEASANT SKULLS!');
-    err_lord.parent(div_preview);
-    err_lord.position(15, 450);
-    err_lord.hide();
-
-    err_handle = createElement('h3', 'INVALID TWITTER HANDLE!');
-    err_handle.parent(div_preview);
-    err_handle.position(15, 450);
-    err_handle.hide();
-
-    err_longname = createElement('h3', 'INVALID TWITTER LONG NAME!');
-    err_longname.parent(div_preview);
-    err_longname.position(15, 450);
-    err_longname.hide();
-
-    msg_processing = createElement('h2', 'SKULLIFYING A WELCOME...');
-    msg_processing.parent(div_preview);
-    msg_processing.position(15, 525);
-    msg_processing.hide();
-
-    msg_header_preview = createElement('h2', 'PREVIEW IN 500x500. ACTUAL IMAGES<br>ARE 1500x500, 1000x1000 and 1000x1000.');
-    msg_header_preview.parent(div_preview);
-    msg_header_preview.position(15, 425);
-    msg_header_preview.hide();
-
-    msg_side_pic_preview = createElement('h2', 'PREVIEW IN 240x240.<br>ACTUAL IMAGE IN 336x336.');
-    msg_side_pic_preview.parent(div_preview);
-    msg_side_pic_preview.position(15, 425);
-    msg_side_pic_preview.hide();
-
-    msg_vector_preview = createElement('h2', 'REGULAR AND TRANSPARENT BACKGROUND<br>VECTORS AVAILABLE FOR DOWNLOAD.');
-    msg_vector_preview.parent(div_preview);
-    msg_vector_preview.position(15, 525);
-    msg_vector_preview.hide();
-
-    msg_bunny_preview = createElement('h2', 'PREVIEW IN 240x240.<br>ACTUAL IMAGE IN 336x336.');
-    msg_bunny_preview.parent(div_preview);
-    msg_bunny_preview.position(15, 425);
-    msg_bunny_preview.hide();
 
     frameRate(gif_frame_rate);
     noLoop();
 }
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
 
 var captured_frames;
 var capturer;
@@ -292,17 +266,17 @@ base_frame_count = 0;
 
 draw = function() {
 
+    // state changes
+    if (!is_looping_state && isLooping()) {
+        base_frame_count = frameCount;
+        is_looping_state = true;
+
+    } else if (is_looping_state && !isLooping()) {
+        is_looping_state = false;
+        is_preview_state = false;
+    }
+
     if (tool_state == WELCOME_GENERATOR_TAB) {
-
-        if (!is_looping_state && isLooping()) {
-            base_frame_count = frameCount;
-            // console.log('base_frame_count', base_frame_count)
-            is_looping_state = true;
-
-        } else if (is_looping_state && !isLooping()) {
-            is_looping_state = false;
-            is_preview_state = false;
-        }
 
         if (frameCount - base_frame_count == 0) {
             // TODO can be included in if statement above??
@@ -321,8 +295,9 @@ draw = function() {
         }
 
         if (is_preview_state && p5_canvas.parent() != div_preview) {
-            button_download_welcome.show();
             msg_processing.hide();
+            button_download.show();
+            msg_preview.show();
             resizeCanvas(PREVIEW_DIM, PREVIEW_DIM);
             p5_canvas.parent(div_preview);
         }
@@ -332,7 +307,7 @@ draw = function() {
             frame_index = (frameCount - base_frame_count) % gif_frame_count;
             myImage(welcome_generation.images[frame_index]);
         } else {
-            draw_welcome_generator_splash();
+            draw_tool_splash();
         }
 
         if (is_capture_state) {
@@ -347,23 +322,13 @@ draw = function() {
         }
 
     } else if (tool_state == HEADER_GENERATION_TAB) {
-
-        if (!is_looping_state && isLooping()) {
-            is_looping_state = true;
-
-        } else if (is_looping_state && !isLooping()) {
-            is_looping_state = false;
-            is_preview_state = false;
-        }
-
         if (is_preview_state && p5_canvas.parent() != div_preview) {
-            button_download_header_all.show();
-            msg_header_preview.show()
             msg_processing.hide();
+            button_download.show();
+            msg_preview.show();
             resizeCanvas(PREVIEW_DIM, PREVIEW_DIM);
             p5_canvas.parent(div_preview);
         }
-
         if (isLooping()) {
             clear();
             if (header_generation.preview_produced) {
@@ -376,27 +341,17 @@ draw = function() {
                 }
             }
         } else {
-            draw_header_generator_splash();
+            draw_tool_splash();
         }
 
     } else if (tool_state == SIDE_PIC_GENERATION_TAB) {
-
-        if (!is_looping_state && isLooping()) {
-            is_looping_state = true;
-
-        } else if (is_looping_state && !isLooping()) {
-            is_looping_state = false;
-            is_preview_state = false;
-        }
-
         if (is_preview_state && p5_canvas.parent() != div_preview) {
-            button_download_side_pic.show();
-            msg_side_pic_preview.show()
             msg_processing.hide();
+            button_download.show();
+            msg_preview.show();
             resizeCanvas(PREVIEW_DIM, PREVIEW_DIM);
             p5_canvas.parent(div_preview);
         }
-
         if (isLooping()) {
             clear();
             if (side_pic_generation.preview_produced) {
@@ -409,27 +364,17 @@ draw = function() {
                 }
             }
         } else {
-            draw_side_pic_generator_splash();
+            draw_tool_splash();
         }
 
     } else if (tool_state == VECTOR_GENERATION_TAB) {
-
-        if (!is_looping_state && isLooping()) {
-            is_looping_state = true;
-
-        } else if (is_looping_state && !isLooping()) {
-            is_looping_state = false;
-            is_preview_state = false;
-        }
-
         if (is_preview_state && p5_canvas.parent() != div_preview) {
-            button_download_vector.show();
-            msg_vector_preview.show()
             msg_processing.hide();
+            button_download.show();
+            msg_preview.show();
             resizeCanvas(PREVIEW_DIM, PREVIEW_DIM);
             p5_canvas.parent(div_preview);
         }
-
         if (isLooping()) {
             clear();
             if (vector_generation.preview_produced) {
@@ -442,27 +387,17 @@ draw = function() {
                 }
             }
         } else {
-            draw_vector_generator_splash();
+            draw_tool_splash();
         }
 
     } else if (tool_state == BUNNY_GENERATION_TAB) {
-
-        if (!is_looping_state && isLooping()) {
-            is_looping_state = true;
-
-        } else if (is_looping_state && !isLooping()) {
-            is_looping_state = false;
-            is_preview_state = false;
-        }
-
         if (is_preview_state && p5_canvas.parent() != div_preview) {
-            button_download_bunny.show();
-            msg_bunny_preview.show()
             msg_processing.hide();
+            button_download.show();
+            msg_preview.show();
             resizeCanvas(PREVIEW_DIM, PREVIEW_DIM);
             p5_canvas.parent(div_preview);
         }
-
         if (isLooping()) {
             clear();
             if (bunny_generation.preview_produced) {
@@ -475,8 +410,21 @@ draw = function() {
                 }
             }
         } else {
-            draw_bunny_generator_splash();
+            draw_tool_splash();
         }
+
+    } else if (tool_state == FLESH_GENERATION_TAB) {
+
+
+
+
+
+
+
+        draw_tool_splash();
+
+
+
 
     }
 
@@ -484,293 +432,44 @@ draw = function() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-function draw_splash_reset() {
+function draw_tool_splash() {
 
     background(0);
-
-    input_number.show();
-    input_handle.hide();
-    input_longname.hide();
 
     input_number.value('');
     input_handle.value('');
     input_longname.value('');
 
+    input_number.show();
+    if (tool_state == WELCOME_GENERATOR_TAB) {
+        input_handle.show();
+        input_longname.show();
+    } else {
+        input_handle.hide();
+        input_longname.hide();
+    }
+
     button_generate.show();
-    msg_processing.hide();
-    msg_header_preview.hide();
-    msg_side_pic_preview.hide();
-    msg_vector_preview.hide();
-    msg_bunny_preview.hide();
-    button_download_welcome.hide();
-    button_download_header_all.hide();
-    button_download_side_pic.hide();
-    button_download_vector.hide();
-    button_download_bunny.hide();
+
+    for (let msg_el of message_elements) {msg_el.hide()};
+
+    msg_processing.html(tool_processing_msg_text[tool_state]);
+    msg_preview.html(tool_preview_msg_text[tool_state]);
+
+    button_download.html(tool_dl_btn_text[tool_state]);
+    button_download.hide();
+
     button_restart.hide();
-}
 
-function draw_welcome_generator_splash() {
-    draw_splash_reset();
-    input_handle.show();
-    input_longname.show();
-    document.getElementById('tool_title').innerHTML = 'WELCOME<br>GENERATOR<br><br>credit<br><a href="https://twitter.com/mdilone" target="_blank">@mdilone</a>';
+    document.getElementById('tool_title').innerHTML = tool_nav_btn_text[tool_state] + '<br><br>credit<br>' + tool_credits[tool_state];
 }
-
-function draw_header_generator_splash() {
-    draw_splash_reset();
-    document.getElementById('tool_title').innerHTML = 'SKULL<br>CREATOR<br><br>credit<br><a href="https://twitter.com/mdilone" target="_blank">@mdilone</a>';
-}
-
-function draw_side_pic_generator_splash() {
-    draw_splash_reset();
-    document.getElementById('tool_title').innerHTML = 'SKULL<br>SIDE PIC<br><br>credit<br><a href="https://twitter.com/KobeDLincoln" target="_blank">@KobeDLincoln</a>';
-}
-
-function draw_vector_generator_splash() {
-    draw_splash_reset();
-    document.getElementById('tool_title').innerHTML = 'SCALABLE<br>PRINT VECTORS<br><br>credit<br><a href="https://twitter.com/KobeDLincoln" target="_blank">@KobeDLincoln</a>';
-}
-
-function draw_bunny_generator_splash() {
-    draw_splash_reset();
-    document.getElementById('tool_title').innerHTML = 'SKULL<br>EASTER BUNNY<br><br>credit<br><a href="https://twitter.com/Sbreyen" target="_blank">@Sbreyen</a>';
-}
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-var welcome_generation;
-var header_generation;
-var skull_number;
-
-function run_generate() {
-    if (tool_state == WELCOME_GENERATOR_TAB) {
-        run_welcome_generate();
-    } else if (tool_state == HEADER_GENERATION_TAB) {
-        run_header_generate();
-    } else if (tool_state == SIDE_PIC_GENERATION_TAB) {
-        run_side_pic_generate();
-    } else if (tool_state == VECTOR_GENERATION_TAB) {
-        run_vector_generate();
-    } else if (tool_state == BUNNY_GENERATION_TAB) {
-        run_bunny_generate();
+function run_restart(new_tool_state=undefined) {
+    if (new_tool_state != undefined) {
+        tool_state = new_tool_state;
     }
-}
-
-function run_welcome_generate() {
-
-    skull_number = parseInt(input_number.value());
-    twitter_handle = input_handle.value();
-    twitter_longname = input_longname.value();
-    // console.log('run_welcome_generate', skull_number, twitter_handle, twitter_longname)
-
-    if (input_number.value() == '' || skull_number == undefined || skull_number < 1 || skull_number > 10000 || isNaN(skull_number)) {
-        // console.log('invalid skull number input');
-        err_number.show();
-        return;
-    }
-
-    if (special_tokens.indexOf(skull_number) !== -1) {
-        err_lord.show();
-        return;
-    }
-
-    if (twitter_handle == undefined || twitter_handle == '') {
-        // console.log('invalid twitter handle input');
-        err_handle.show();
-        return;
-    }
-    if (twitter_longname == undefined || twitter_longname == '') {
-        // console.log('invalid twitter long name input');
-        err_longname.show();
-        return;
-    }
-
-    input_number.hide();
-    input_handle.hide();
-    input_longname.hide();
-    button_generate.hide();
-    err_number.hide();
-    err_lord.hide();
-    err_handle.hide();
-    err_longname.hide();
-    button_restart.show();
-    msg_processing.show();
-
-    welcome_generation = new WelcomeGeneration(skull_number, twitter_handle, twitter_longname);
-    loop();
-}
-
-function run_welcome_download() {
-    console.log('downloading gif')
-    resizeCanvas(REF_DIM, REF_DIM);
-    capturer.save();
-    resizeCanvas(PREVIEW_DIM, PREVIEW_DIM);
-}
-
-function run_header_generate() {
-
-    skull_number = parseInt(input_number.value());
-
-    if (input_number.value() == '' || skull_number == undefined || skull_number < 1 || skull_number > 10000 || isNaN(skull_number)) {
-        // console.log('invalid skull number input');
-        err_number.show();
-        return;
-    }
-
-    if (special_tokens.indexOf(skull_number) !== -1) {
-        err_lord.show();
-        return;
-    }
-
-    input_number.hide();
-    button_generate.hide();
-    err_number.hide();
-    err_lord.hide();
-    button_restart.show();
-
-    header_generation = new HeaderGeneration(skull_number);
-    header_generation.produce();
-    loop();
-
-}
-
-function run_side_pic_generate() {
-
-    skull_number = parseInt(input_number.value());
-
-    if (input_number.value() == '' || skull_number == undefined || skull_number < 1 || skull_number > 10000 || isNaN(skull_number)) {
-        // console.log('invalid skull number input');
-        err_number.show();
-        return;
-    }
-
-    if (special_tokens.indexOf(skull_number) !== -1) {
-        err_lord.show();
-        return;
-    }
-
-    input_number.hide();
-    button_generate.hide();
-    err_number.hide();
-    err_lord.hide();
-    button_restart.show();
-
-    side_pic_generation = new SidePicGeneration(skull_number);
-    side_pic_generation.produce();
-    loop();
-
-}
-
-function run_vector_generate() {
-
-    skull_number = parseInt(input_number.value());
-
-    if (input_number.value() == '' || skull_number == undefined || skull_number < 1 || skull_number > 10000 || isNaN(skull_number)) {
-        // console.log('invalid skull number input');
-        err_number.show();
-        return;
-    }
-
-    if (special_tokens.indexOf(skull_number) !== -1) {
-        err_lord.show();
-        return;
-    }
-
-    input_number.hide();
-    button_generate.hide();
-    err_number.hide();
-    err_lord.hide();
-    button_restart.show();
-
-    vector_generation = new VectorGeneration(skull_number);
-    vector_generation.produce();
-    loop();
-
-}
-
-function run_bunny_generate() {
-
-    skull_number = parseInt(input_number.value());
-
-    if (input_number.value() == '' || skull_number == undefined || skull_number < 1 || skull_number > 10000 || isNaN(skull_number)) {
-        // console.log('invalid skull number input');
-        err_number.show();
-        return;
-    }
-
-    if (special_tokens.indexOf(skull_number) !== -1) {
-        err_lord.show();
-        return;
-    }
-
-    input_number.hide();
-    button_generate.hide();
-    err_number.hide();
-    err_lord.hide();
-    button_restart.show();
-
-    bunny_generation = new BunnyGeneration(skull_number);
-    bunny_generation.produce();
-    loop();
-
-}
-
-async function run_header_download_all() {
-    console.log('downloading image 1');
-    header_generation.img_header.save('CS_Twitter_Header_' + header_generation.skull_number, 'png');
-    await sleep(1000);
-    console.log('downloading image 2');
-    header_generation.img_square_a.save('CS_1x1A_' + header_generation.skull_number, 'png');
-    await sleep(1000);
-    console.log('downloading image 3');
-    header_generation.img_square_b.save('CS_1x1B_' + header_generation.skull_number, 'png');
-}
-
-function run_side_pic_download() {
-    console.log('downloading image');
-    side_pic_generation.img_side_pic_dl.save('CS_side_pic_' + side_pic_generation.skull_number, 'png');
-}
-
-async function run_vector_download() {
-    console.log('downloading vectors');
-
-    var anchor_1 = document.createElement('a');
-    anchor_1.href = vector_generation.url_svg_o;
-    anchor_1.target = '_blank';
-    anchor_1.download = 'CS_vector_' + vector_generation.skull_number + '.svg';
-
-    var anchor_2 = document.createElement('a');
-    anchor_2.href = vector_generation.url_svg_t;
-    anchor_2.target = '_blank';
-    anchor_2.download = 'CS_vector_t_' + vector_generation.skull_number + '.svg';
-
-    anchor_1.click();
-    await sleep(1000);
-    anchor_2.click();
-
-    document.removeChild(anchor_1);
-    document.removeChild(anchor_2);
-}
-
-async function run_bunny_download() {
-    console.log('downloading png');
-    bunny_generation.img_bunny_dl.save('CS_bunny_' + bunny_generation.skull_number, 'png');
-
-    var anchor_1 = document.createElement('a');
-    anchor_1.href = bunny_generation.url_svg_o;
-    anchor_1.target = '_blank';
-    anchor_1.download = 'CS_bunny_' + bunny_generation.skull_number + '.svg';
-    await sleep(1000);
-    console.log('downloading svg');
-    anchor_1.click();
-    document.removeChild(anchor_1);
-}
-
-function run_welcome_restart() {
-    // console.log('restarting');
     is_looping_state = false;
     is_preview_state = false;
     is_capture_state = false;
@@ -781,32 +480,69 @@ function run_welcome_restart() {
     p5_canvas.parent(div_capture);
 }
 
-function nav_welcome_generator() {
-    tool_state = WELCOME_GENERATOR_TAB;
-    run_welcome_restart();
+// CHECK INPUTS AND GENERATE ///////////////////////////////////////////////////////////////////////
+
+var welcome_generation;
+var skull_number;
+
+ERR_NUMBER = 'INVALID SKULL NUMBER!';
+ERR_LORD = 'NO LORDS! ONLY PEASANT SKULLS!';
+ERR_HANDLE = 'INVALID TWITTER HANDLE!';
+ERR_LONGNAME = 'INVALID TWITTER LONG NAME!';
+
+function run_generate() {
+
+    skull_number = parseInt(input_number.value());
+    if (input_number.value() == '' || skull_number == undefined || skull_number < 1 || skull_number > 10000 || isNaN(skull_number)) {
+        show_error(ERR_NUMBER);
+        return;
+    }
+    if (special_tokens.indexOf(skull_number) !== -1) {
+        show_error(ERR_LORD);
+        return;
+    }
+
+    if (tool_state == WELCOME_GENERATOR_TAB) {
+        twitter_handle = input_handle.value();
+        twitter_longname = input_longname.value();
+        if (twitter_handle == undefined || twitter_handle == '') {
+            show_error(ERR_HANDLE);
+            return;
+        }
+        if (twitter_longname == undefined || twitter_longname == '') {
+            show_error(ERR_LONGNAME);
+            return;
+        }
+    }
+
+    input_number.hide();
+    input_handle.hide();
+    input_longname.hide();
+
+    button_generate.hide();
+    for (let msg_el of message_elements) {msg_el.hide()};
+
+    button_restart.show();
+    msg_processing.show();
+
+    if (tool_state == WELCOME_GENERATOR_TAB) {
+        welcome_generation = new WelcomeGeneration(skull_number, twitter_handle, twitter_longname);
+    } else if (tool_state == HEADER_GENERATION_TAB) {
+        header_generation = new HeaderGeneration(skull_number);
+    } else if (tool_state == SIDE_PIC_GENERATION_TAB) {
+        side_pic_generation = new SidePicGeneration(skull_number);
+    } else if (tool_state == VECTOR_GENERATION_TAB) {
+        vector_generation = new VectorGeneration(skull_number);
+    } else if (tool_state == BUNNY_GENERATION_TAB) {
+        bunny_generation = new BunnyGeneration(skull_number);
+    } else if (tool_state == FLESH_GENERATION_TAB) {
+
+
+    }
+    loop();
 }
 
-function nav_header_generator() {
-    tool_state = HEADER_GENERATION_TAB;
-    run_welcome_restart();
-}
-
-function nav_side_pic_generator() {
-    tool_state = SIDE_PIC_GENERATION_TAB;
-    run_welcome_restart();
-}
-
-function nav_vector_generator() {
-    tool_state = VECTOR_GENERATION_TAB;
-    run_welcome_restart();
-}
-
-function nav_bunny_generator() {
-    tool_state = BUNNY_GENERATION_TAB;
-    run_welcome_restart();
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
+// INDIVIDUAL TOOL GENERATION LOGIC ////////////////////////////////////////////////////////////////
 
 function WelcomeGeneration(skull_number, twitter_handle, twitter_longname) {
     this.skull_number = skull_number;
@@ -838,9 +574,7 @@ function WelcomeGeneration(skull_number, twitter_handle, twitter_longname) {
             color_accent = color_outline;
             console.log('Setting accent color to outline color!')
         }
-
         // console.log(this.color_bg, this.color_skull, color_accent)
-
         this.img_16 = bw_replace(img_sn2, color_accent, this.color_skull)
         this.img_17 = bw_replace(img_sn3, color_accent, this.color_skull)
         this.img_18 = bw_replace(img_sn3, this.color_skull, color_accent)
@@ -941,8 +675,6 @@ class HeaderGeneration {
         this.loaded_square_a = false;
         this.loaded_square_b = false;
         this.preview_produced = false;
-    }
-    produce() {
         this.preview_image = createGraphics(PREVIEW_DIM, PREVIEW_DIM);
         console.log('generating header', this.skull_number);
         let img_base_url = 'https://raw.githubusercontent.com/KobeLincoln/cryptoskull_stuff/main/exports/';
@@ -989,8 +721,6 @@ class SidePicGeneration {
         this.loaded_side_pic = false;
         this.loaded_og_pic = false;
         this.preview_produced = false;
-    }
-    produce() {
         this.preview_image = createGraphics(PREVIEW_DIM, PREVIEW_DIM);
         console.log('generating side pic', this.skull_number);
         let img_base_url = 'https://raw.githubusercontent.com/KobeLincoln/cryptoskull_stuff/main/exports/';
@@ -1020,8 +750,6 @@ class VectorGeneration {
         this.skull_number = skull_number;
         this.loaded_og_pic = false;
         this.preview_produced = false;
-    }
-    produce() {
         this.preview_image = createGraphics(PREVIEW_DIM, PREVIEW_DIM);
         console.log('generating vector', this.skull_number);
         let img_base_url = 'https://raw.githubusercontent.com/KobeLincoln/cryptoskull_stuff/main/exports/';
@@ -1048,8 +776,6 @@ class BunnyGeneration {
         this.loaded_bunny = false;
         this.loaded_og_pic = false;
         this.preview_produced = false;
-    }
-    produce() {
         this.preview_image = createGraphics(PREVIEW_DIM, PREVIEW_DIM);
         console.log('generating bunny pic', this.skull_number);
         let img_base_url = 'https://raw.githubusercontent.com/KobeLincoln/cryptoskull_stuff/main/exports/';
@@ -1072,5 +798,74 @@ class BunnyGeneration {
         } else {
             // console.log(this.loaded_bunny, this.preview_produced)
         }
+    }
+}
+
+class FleshGeneration {
+    constructor(skull_number) {
+        this.skull_number = skull_number;
+
+
+
+    }
+    update() {
+
+
+
+    }
+}
+
+// DOWNLOAD ////////////////////////////////////////////////////////////////////////////////////////
+
+async function run_download() {
+    if (tool_state == WELCOME_GENERATOR_TAB) {
+        console.log('downloading gif')
+        resizeCanvas(REF_DIM, REF_DIM);
+        capturer.save();
+        resizeCanvas(PREVIEW_DIM, PREVIEW_DIM);
+    } else if (tool_state == HEADER_GENERATION_TAB) {
+        console.log('downloading image 1');
+        header_generation.img_header.save('CS_Twitter_Header_' + header_generation.skull_number, 'png');
+        await sleep(1000);
+        console.log('downloading image 2');
+        header_generation.img_square_a.save('CS_1x1A_' + header_generation.skull_number, 'png');
+        await sleep(1000);
+        console.log('downloading image 3');
+        header_generation.img_square_b.save('CS_1x1B_' + header_generation.skull_number, 'png');
+    } else if (tool_state == SIDE_PIC_GENERATION_TAB) {
+        console.log('downloading image');
+        side_pic_generation.img_side_pic_dl.save('CS_side_pic_' + side_pic_generation.skull_number, 'png');
+    } else if (tool_state == VECTOR_GENERATION_TAB) {
+        console.log('downloading vectors');
+        var anchor_1 = document.createElement('a');
+        anchor_1.href = vector_generation.url_svg_o;
+        anchor_1.target = '_blank';
+        anchor_1.download = 'CS_vector_' + vector_generation.skull_number + '.svg';
+        var anchor_2 = document.createElement('a');
+        anchor_2.href = vector_generation.url_svg_t;
+        anchor_2.target = '_blank';
+        anchor_2.download = 'CS_vector_t_' + vector_generation.skull_number + '.svg';
+        anchor_1.click();
+        await sleep(1000);
+        anchor_2.click();
+    } else if (tool_state == BUNNY_GENERATION_TAB) {
+        console.log('downloading png');
+        bunny_generation.img_bunny_dl.save('CS_bunny_' + bunny_generation.skull_number, 'png');
+        var anchor_1 = document.createElement('a');
+        anchor_1.href = bunny_generation.url_svg_o;
+        anchor_1.target = '_blank';
+        anchor_1.download = 'CS_bunny_' + bunny_generation.skull_number + '.svg';
+        await sleep(1000);
+        console.log('downloading svg');
+        anchor_1.click();
+    } else if (tool_state == FLESH_GENERATION_TAB) {
+
+
+
+
+
+
+
+
     }
 }
