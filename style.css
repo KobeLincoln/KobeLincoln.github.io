@@ -109,16 +109,14 @@ h3 {
     color:  #c20e1a;
 }
 
-input {
-    color: #515151;
+h4 {
+    padding-top: 0px;
+    padding-left: 0px;
     font-size: 36px;
-    border-bottom: 1px solid;
-    border-color: white;
-}
-
-::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
-  color: #515151;
-  opacity: 1; /* Firefox */
+    margin-top: 0px;
+    line-height: 36px;
+    font-weight: lighter;
+    color:  #515151;
 }
 
 button {
@@ -134,6 +132,23 @@ button {
 button:hover {
     color: #c20e1a;
     cursor:pointer;
+}
+
+input {
+    color: #515151;
+    font-size: 36px;
+    border-bottom: 1px solid;
+    border-color: white;
+}
+
+input[type="file"] {
+    width: 445px; /* Keep it under 100px in order to hide the unwanted text. */
+    font-size: 28px;
+}
+
+::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
+  color: #515151;
+  opacity: 1; /* Firefox */
 }
 
 #canvasForHTML {
