@@ -150,7 +150,7 @@ function get_expand_width_textsize(graphic, str, max_width) {
 
 // TOOL STATES /////////////////////////////////////////////////////////////////////////////////////
 
-const N_TOOLS = 7;
+const N_TOOLS = 8;
 
 const WELCOME_GENERATOR_TAB = 0;
 const HEADER_GENERATION_TAB = 1;
@@ -159,6 +159,7 @@ const VECTOR_GENERATION_TAB = 3;
 const BUNNY_GENERATION_TAB = 4;
 const FLESH_GENERATION_TAB = 5;
 const HOOD_GENERATION_TAB = 6;
+const VOTED_GENERATION_TAB = 7
 
 const tool_nav_btn_text = [
     'WELCOME<br>GENERATOR',
@@ -168,6 +169,7 @@ const tool_nav_btn_text = [
     'SKULL<br>EASTER BUNNY',
     'SKULL<br>FLESH TOOL',
     'SKULL<br>HOOD TOOL',
+    'SKULL<br>VOTER TOOL',
 ];
 
 html_link = (url, text) => {return '<a href="' + url + '" target="_blank">' + text + '</a>'};
@@ -182,6 +184,7 @@ const tool_credits = [
     credit('art', twitter_link('jbray808')) + credit('tool', twitter_link('KobeDLincoln'))
     + credit('AI', html_link('https://justadudewhohacks.github.io/face-api.js/docs/index.html', 'face-api.js')),
     credit('art', twitter_link('HeMaxiOk')) + credit('tool', twitter_link('KobeDLincoln')),
+    credit('art', twitter_link('mdilone')) + credit('tool', twitter_link('KobeDLincoln')),
 ];
 
 const tool_tip_msg_text = [
@@ -195,6 +198,7 @@ const tool_tip_msg_text = [
         + '<br>- DIRECT FACE SHOT AT A STRAIGHT ANGLE'
         + '<br>- SOLID (PREFERABLY WHITE) BACKGROUND',
     '',
+    '',
 ];
 
 const tool_processing_msg_text = [
@@ -205,6 +209,7 @@ const tool_processing_msg_text = [
     'EASTER BUNNIFYING SKULL...',
     'FLESHIFYING SKULL...',
     'HOODING SKULL... ',
+    'RETRIEVING VOTER SKULL...'
 ];
 
 const tool_preview_msg_text = [
@@ -215,6 +220,7 @@ const tool_preview_msg_text = [
     'PREVIEW IN 240x240.<br>ACTUAL IMAGE IN 336x336.',
     'PREVIEW AND DOWNLOAD IN 480x480.',
     'PREVIEW IN 240x240.<br>ACTUAL IMAGE IN 336x336.',
+    'PREVIEW IN 480x480.<br>ACTUAL IMAGE IN 960x960.',
 ];
 
 const tool_dl_btn_text = [
@@ -223,6 +229,7 @@ const tool_dl_btn_text = [
     'DOWNLOAD IMAGE',
     'DOWNLOAD VECTORS',
     'DOWNLOAD PNG & SVG',
+    'DOWNLOAD IMAGE',
     'DOWNLOAD IMAGE',
     'DOWNLOAD IMAGE',
 ];
@@ -876,6 +883,34 @@ class HoodGeneration {
     }
 }
 
+// VOTED ////////////////////////////////////////////////////////////////////////////////////////////
+
+class VotedGeneration {
+    constructor(skull_number) {
+        this.skull_number = skull_number;
+        this.loaded_voted = false;
+        this.preview_produced = false;
+        this.preview_image = createGraphics(PREVIEW_DIM, PREVIEW_DIM);
+        console.log('generating voted', this.skull_number);
+        let img_base_url = 'https://raw.githubusercontent.com/KobeLincoln/cryptoskull_stuff/main/exports/';
+        this.img_voted = loadImage(img_base_url + 'voted/' + this.skull_number + '.png', () => {this.loaded_voted = true;});
+    }
+    update() {
+        if (this.loaded_voted && !this.preview_produced) {
+            console.log('generating preview image');
+
+            this.img_voted_dl = this.img_voted.get();
+
+            let img_voted_scaled = this.img_voted.get();
+            img_voted_scaled.resizeNN(480);
+
+            this.preview_image.image(img_voted_scaled, 0, 0);
+
+            this.preview_produced = true;
+        }
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 let generation_classes = [
@@ -886,6 +921,7 @@ let generation_classes = [
     BunnyGeneration,
     FleshGeneration,
     HoodGeneration,
+    VotedGeneration,
 ];
 
 // DOWNLOAD ////////////////////////////////////////////////////////////////////////////////////////
@@ -935,6 +971,9 @@ async function run_download() {
     } else if (tool_state == HOOD_GENERATION_TAB) {
         console.log('downloading image');
         tool_generation.img_hood_dl.save('CS_hood_' + tool_generation.skull_number, 'png');
+    } else if (tool_state == VOTED_GENERATION_TAB) {
+        console.log('downloading image');
+        tool_generation.img_voted_dl.save('CS_voted_' + tool_generation.skull_number, 'png');
     }
 }
 
